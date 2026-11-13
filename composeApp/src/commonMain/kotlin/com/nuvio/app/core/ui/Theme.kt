@@ -1,19 +1,26 @@
 package com.nuvio.app.core.ui
 
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Typography
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -200,9 +207,38 @@ fun NuvioTheme(
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit,
 ) {
-    val palette = remember(appTheme, customThemeColors) {
+    val basePalette = remember(appTheme, customThemeColors) {
         ThemeColors.getColorPalette(appTheme, customThemeColors)
     }
+
+    val palette = if (appTheme.isAnimated) {
+        val transition = rememberInfiniteTransition(label = "theme_pulse")
+        val pulsedPrimary by transition.animateColor(
+            initialValue = basePalette.secondary,
+            targetValue = basePalette.secondaryVariant,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "theme_primary_pulse",
+        )
+        val pulsedRing by transition.animateColor(
+            initialValue = basePalette.focusRing,
+            targetValue = basePalette.secondary,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "theme_ring_pulse",
+        )
+        basePalette.copy(
+            secondary = pulsedPrimary,
+            focusRing = pulsedRing,
+        )
+    } else {
+        basePalette
+    }
+
     val colorScheme = buildColorScheme(palette, amoled = amoled)
     val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
 
