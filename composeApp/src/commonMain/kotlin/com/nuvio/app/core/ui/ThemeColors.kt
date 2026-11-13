@@ -18,6 +18,62 @@ data class ThemeColorPalette(
 
 object ThemeColors {
 
+    val MidnightCyan = ThemeColorPalette(
+        secondary = Color(0xFF00E5FF),
+        secondaryVariant = Color(0xFF2979FF),
+        accentGradient = listOf(Color(0xFF00E5FF), Color(0xFF00B0FF), Color(0xFF2979FF)),
+        nativeAccentHex = "#00E5FF",
+        onSecondary = Color(0xFF09131A),
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFF64F5FF),
+        focusBackground = Color(0xFF123242),
+        background = Color(0xFF090D12),
+        backgroundElevated = Color(0xFF111924),
+        backgroundCard = Color(0xFF162230),
+    )
+
+    val SunsetEmber = ThemeColorPalette(
+        secondary = Color(0xFFFF5E3A),
+        secondaryVariant = Color(0xFFFFA726),
+        accentGradient = listOf(Color(0xFFFF2A68), Color(0xFFFF5E3A), Color(0xFFFFA726)),
+        nativeAccentHex = "#FF5E3A",
+        onSecondary = Color(0xFF140B08),
+        onSecondaryVariant = Color(0xFF140B08),
+        focusRing = Color(0xFFFF9E66),
+        focusBackground = Color(0xFF3E1D16),
+        background = Color(0xFF110B0A),
+        backgroundElevated = Color(0xFF1E1412),
+        backgroundCard = Color(0xFF291B18),
+    )
+
+    val EmeraldAurora = ThemeColorPalette(
+        secondary = Color(0xFF00E676),
+        secondaryVariant = Color(0xFF00B8D4),
+        accentGradient = listOf(Color(0xFF69F0AE), Color(0xFF00E676), Color(0xFF00B8D4)),
+        nativeAccentHex = "#00E676",
+        onSecondary = Color(0xFF08140E),
+        onSecondaryVariant = Color(0xFF08140E),
+        focusRing = Color(0xFF69F0AE),
+        focusBackground = Color(0xFF123828),
+        background = Color(0xFF09100D),
+        backgroundElevated = Color(0xFF111D18),
+        backgroundCard = Color(0xFF162720),
+    )
+
+    val RoyalAmethyst = ThemeColorPalette(
+        secondary = Color(0xFFB721FF),
+        secondaryVariant = Color(0xFFFF2A85),
+        accentGradient = listOf(Color(0xFF7C4DFF), Color(0xFFB721FF), Color(0xFFFF2A85)),
+        nativeAccentHex = "#B721FF",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFFE07BFF),
+        focusBackground = Color(0xFF311642),
+        background = Color(0xFF0E0A12),
+        backgroundElevated = Color(0xFF191221),
+        backgroundCard = Color(0xFF22182E),
+    )
+
     val Gold = ThemeColorPalette(
         secondary = Color(0xFFE8A91C),
         secondaryVariant = Color(0xFF9A6200),
@@ -177,6 +233,10 @@ object ThemeColors {
         theme: AppTheme,
         customColors: CustomThemeColors = CustomThemeColors.Default,
     ): ThemeColorPalette = when (theme) {
+        AppTheme.MIDNIGHT_CYAN -> MidnightCyan
+        AppTheme.SUNSET_EMBER -> SunsetEmber
+        AppTheme.EMERALD_AURORA -> EmeraldAurora
+        AppTheme.ROYAL_AMETHYST -> RoyalAmethyst
         AppTheme.CUSTOM -> customColors.toColorPalette()
         AppTheme.GOLD -> Gold
         AppTheme.JADE -> Jade
