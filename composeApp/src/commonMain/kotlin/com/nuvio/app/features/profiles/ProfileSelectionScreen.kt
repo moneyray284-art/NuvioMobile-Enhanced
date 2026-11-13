@@ -241,6 +241,29 @@ fun ProfileSelectionScreen(
                     .graphicsLayer { alpha = contentFadeAlpha.value },
                 horizontalAlignment = Alignment.CenterHorizontally,
               ) {
+                  val welcomeMessage = remember {
+    listOf(
+        "Welcome back - ready for your next watch?",
+        "Lights down - ready for your next watch?",
+        "Good to see you again! Enjoy the show.",
+        "Your cinema is ready. Dive back in.",
+        "Back for another episode? Let's roll.",
+        "Popcorn ready? Pick up right where you left off."
+    ).random()
+}
+
+AnimatedVisibility(
+    visible = true,
+    enter = fadeIn() + slideInVertically(),
+    exit = fadeOut() + slideOutVertically()
+) {
+    Text(
+        text = welcomeMessage,
+        modifier = Modifier.padding(bottom = 12.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
+    )
+}
                 Text(
                     text = stringResource(Res.string.profile_who_is_watching),
                     style = MaterialTheme.typography.headlineLarge.copy(
