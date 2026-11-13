@@ -1,5 +1,9 @@
 <resources>
     <string name="theme_gold">Gold</string>
+    <string name="theme_midnight_cyan">Midnight Cyan (Animated)</string>
+    <string name="theme_sunset_ember">Sunset Ember (Animated)</string>
+    <string name="theme_emerald_aurora">Emerald Aurora (Animated)</string>
+    <string name="theme_royal_amethyst">Royal Amethyst (Animated)</string>
     <string name="theme_jade">Jade</string>
     <string name="theme_rose_gold">Rose Gold</string>
     <string name="theme_arctic_blue">Arctic Blue</string>
