@@ -55,6 +55,14 @@ import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.TabsRoute
 import kotlinx.coroutines.delay
 
+private val WelcomeMessages = listOf(
+    "Welcome back � ready for your next watch?",
+    "Lights down, stream on. Enjoy the show.",
+    "Good to see you again! What are we watching today?",
+    "Your cinema is ready. Dive back in.",
+    "Back for another episode? Let's roll.",
+    "Popcorn ready? Pick up right where you left off.",
+)
 
 fun disposeRoute(route: AppRoute) {
     disposeRouteResources(route)
