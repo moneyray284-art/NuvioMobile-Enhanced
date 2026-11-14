@@ -216,7 +216,7 @@ private const val CLOUD_SERVICES_FAQ_URL = "https://nuvioapp.space/faq#common-cl
 
 // Upper bound for device-authorization polling when every redeem keeps throwing. Device codes
 // expire server-side within minutes (TorBox/Premiumize), so this is comfortably beyond any code's
-// lifetime — it only exists to stop an indefinitely-offline dialog from polling forever.
+// lifetime â€” it only exists to stop an indefinitely-offline dialog from polling forever.
 private val DEVICE_AUTH_MAX_POLL_DURATION = 15.minutes
 
 internal fun LazyListScope.debridSettingsContent(
@@ -1375,7 +1375,7 @@ private fun DebridDeviceAuthDialog(
         val activeSession = session ?: return@LaunchedEffect
         // Watchdog for the throwing path below: device codes expire server-side within minutes,
         // so if every redeem keeps throwing past this deadline the failure is persistent (e.g.
-        // airplane mode / captive portal), not a brief background-network blip — give up then.
+        // airplane mode / captive portal), not a brief background-network blip â€” give up then.
         val pollDeadline = TimeSource.Monotonic.markNow() + DEVICE_AUTH_MAX_POLL_DURATION
         while (true) {
             delay(activeSession.intervalSeconds.coerceAtLeast(1) * 1_000L)
@@ -1389,7 +1389,7 @@ private fun DebridDeviceAuthDialog(
                 // A throwing redeem is almost always transient connectivity loss rather than a
                 // fatal error: aggressive ROMs (OxygenOS/MIUI/etc.) sever the backgrounded app's
                 // sockets + DNS while the user approves in the browser, so the in-flight poll
-                // throws UnknownHostException/IOException. Keep polling instead of terminating —
+                // throws UnknownHostException/IOException. Keep polling instead of terminating â€”
                 // terminating here on a transient error is what caused "Could not start sign-in"
                 // on OnePlus devices (issue #1409). A response-bearing expiry still surfaces via
                 // the Expired branch once requests reach the server; the pollDeadline watchdog
@@ -1809,7 +1809,7 @@ private fun DebridProviderUsageCard(
                 ) {
                     NuvioLoadingIndicator(modifier = Modifier.size(16.dp))
                     Text(
-                        text = "Fetching account stats…",
+                        text = "Fetching account statsâ€¦",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
