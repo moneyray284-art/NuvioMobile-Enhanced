@@ -35,7 +35,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: ${{ inputs.configuration == 'Release' && 180 || 30 }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
       IOS_CONFIGURATION: ${{ inputs.configuration }}
       NUVIO_IOS_PHASE_PROFILE: ${{ inputs.disable_phases }}
@@ -70,6 +70,7 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+          xcodebuild -showdestinations -scheme iosApp -project iosApp/iosApp.xcodeproj
 
       - name: Configure runtime properties
         if: env.RELEASE_PROPERTIES_BASE64 != ''
