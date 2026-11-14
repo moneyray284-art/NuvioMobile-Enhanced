@@ -70,6 +70,9 @@ import com.nuvio.app.features.debrid.DebridStreamSortCriterion
 import com.nuvio.app.features.debrid.DebridStreamSortDirection
 import com.nuvio.app.features.debrid.DebridStreamSortKey
 import com.nuvio.app.features.debrid.DebridStreamVisualTag
+import com.nuvio.app.features.debrid.TorboxApiClient
+import com.nuvio.app.features.debrid.PremiumizeApiClient
+import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
@@ -335,7 +338,7 @@ internal fun LazyListScope.debridSettingsContent(
                     onConnected = { token -> DebridSettingsRepository.setProviderApiKey(provider.id, token) },
                     onDisconnect = { DebridSettingsRepository.setProviderApiKey(provider.id, "") },
                     onDismiss = { activeDeviceAuthProviderId = null },
-                    onUseApiKey = if (provider.id == DebridProviders.TORBOX_ID) {
+                    onUseApiKey = if (provider.id == DebridProviders.TORBOX_ID || provider.id == DebridProviders.PREMIUMIZE_ID) {
                         {
                             activeDeviceAuthProviderId = null
                             activeApiKeyProviderId = provider.id
@@ -1444,6 +1447,10 @@ private fun DebridDeviceAuthDialog(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            DebridProviderUsageCard(
+                providerId = provider.id,
+                apiKey = currentValue,
+            )
         } else if (isStarting) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1728,4 +1735,165 @@ private fun DebridInfoRow(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+@Composable
+private fun DebridProviderUsageCard(
+    providerId: String,
+    apiKey: String,
+) {
+    if (providerId != DebridProviders.TORBOX_ID && providerId != DebridProviders.PREMIUMIZE_ID) return
+
+    var isLoading by remember(providerId, apiKey) { mutableStateOf(true) }
+    var torboxData by remember(providerId, apiKey) { mutableStateOf<com.nuvio.app.features.debrid.TorboxUserDataDto?>(null) }
+    var premiumizeData by remember(providerId, apiKey) { mutableStateOf<com.nuvio.app.features.debrid.PremiumizeAccountInfoDto?>(null) }
+    var errorMessage by remember(providerId, apiKey) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(providerId, apiKey) {
+        val trimmed = apiKey.trim()
+        if (trimmed.isBlank()) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+        isLoading = true
+        errorMessage = null
+        try {
+            when (providerId) {
+                DebridProviders.TORBOX_ID -> {
+                    val resp = TorboxApiClient.getUserData(trimmed)
+                    if (resp.isSuccessful && resp.body?.success == true) {
+                        torboxData = resp.body.data
+                    } else {
+                        errorMessage = resp.body?.detail ?: "Failed to load Torbox account data"
+                    }
+                }
+                DebridProviders.PREMIUMIZE_ID -> {
+                    val resp = PremiumizeApiClient.accountInfo(trimmed)
+                    if (resp.isSuccessful && resp.body?.status.equals("success", ignoreCase = true)) {
+                        premiumizeData = resp.body
+                    } else {
+                        errorMessage = resp.body?.message ?: "Failed to load Premiumize account data"
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            errorMessage = e.message ?: "Network error"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Account Usage & Subscription",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            if (isLoading) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NuvioLoadingIndicator(modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "Fetching account stats…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else if (errorMessage != null) {
+                Text(
+                    text = errorMessage.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else if (providerId == DebridProviders.TORBOX_ID) {
+                val tb = torboxData
+                val planName = when (tb?.plan) {
+                    0 -> "Free"
+                    1 -> "Essential"
+                    2 -> "Pro"
+                    3 -> "Standard"
+                    else -> if (tb?.isSubscribed == true) "Premium" else "Free"
+                }
+                val totalUsedBytes = tb?.stats?.totalBytesDownloaded
+                    ?: tb?.totalDownloaded
+                    ?: tb?.totalBytes
+                    ?: 0L
+                val totalUsedFormatted = formatUsageBytes(totalUsedBytes.toDouble())
+                val expiresAt = tb?.premiumExpiresAt?.take(10) ?: if (tb?.isSubscribed == true) "Active" else "Expired / Inactive"
+
+                DebridUsageStatRow("Plan", planName)
+                DebridUsageStatRow("Total Data Used", totalUsedFormatted)
+                DebridUsageStatRow("Used Today", "Included in total")
+                DebridUsageStatRow("Expires At", expiresAt)
+            } else if (providerId == DebridProviders.PREMIUMIZE_ID) {
+                val pm = premiumizeData
+                val limitFrac = pm?.limitUsed ?: 0.0
+                val totalCloudGB = 1000.0 // Premiumize standard fair-use quota is 1000 GB
+                val usedGB = limitFrac * totalCloudGB
+                val leftGB = (totalCloudGB - usedGB).coerceAtLeast(0.0)
+
+                val expiresAt = pm?.premiumUntil?.let { timestamp ->
+                    if (timestamp <= 0) "Expired / Free"
+                    else {
+                        val days = (timestamp - (kotlin.time.TimeSource.Monotonic.markNow().elapsedNow().inWholeSeconds + 1731630000L)) / 86400
+                        if (days > 0) "$days days remaining" else "Active"
+                    }
+                } ?: "Unknown"
+
+                DebridUsageStatRow("Total Allowance", "1000 GB")
+                DebridUsageStatRow("Data Left", "${(leftGB * 10).toLong() / 10.0} GB (${((1.0 - limitFrac) * 100).toInt()}%)")
+                DebridUsageStatRow("Used Today / Recent", "${(usedGB * 10).toLong() / 10.0} GB (${(limitFrac * 100).toInt()}%)")
+                DebridUsageStatRow("Expires At", expiresAt)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DebridUsageStatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+private fun formatUsageBytes(bytes: Double): String {
+    if (bytes <= 0.0) return "0 B"
+    val units = listOf("B", "KB", "MB", "GB", "TB")
+    var current = bytes
+    var idx = 0
+    while (current >= 1024.0 && idx < units.lastIndex) {
+        current /= 1024.0
+        idx++
+    }
+    val rounded = (current * 10).toLong() / 10.0
+    return "$rounded ${units[idx]}"
 }
