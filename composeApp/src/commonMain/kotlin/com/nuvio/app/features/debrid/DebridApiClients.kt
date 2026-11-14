@@ -54,6 +54,13 @@ internal object TorboxApiClient {
     suspend fun validateApiKey(apiKey: String): Boolean =
         getUser(apiKey.trim()).status in 200..299
 
+    suspend fun getUserData(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<TorboxUserDataDto>> =
+        request(
+            method = "GET",
+            url = "$BASE_URL/v1/api/user/me?settings=true",
+            apiKey = apiKey,
+        )
+
     private suspend fun getUser(apiKey: String): RawHttpResponse =
         httpRequestRaw(
             method = "GET",
