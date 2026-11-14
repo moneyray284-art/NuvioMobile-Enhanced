@@ -98,6 +98,26 @@ internal data class TorboxDeviceTokenDto(
 )
 
 @Serializable
+internal data class TorboxUserStatsDto(
+    @SerialName("total_bytes_downloaded") val totalBytesDownloaded: Long? = null,
+    @SerialName("total_bytes_uploaded") val totalBytesUploaded: Long? = null,
+    @SerialName("total_downloads") val totalDownloads: Long? = null,
+)
+
+@Serializable
+internal data class TorboxUserDataDto(
+    val id: Long? = null,
+    val email: String? = null,
+    val plan: Int? = null,
+    @SerialName("is_subscribed") val isSubscribed: Boolean? = null,
+    @SerialName("premium_expires_at") val premiumExpiresAt: String? = null,
+    @SerialName("total_downloaded") val totalDownloaded: Long? = null,
+    @SerialName("total_uploaded") val totalUploaded: Long? = null,
+    @SerialName("total_bytes") val totalBytes: Long? = null,
+    @SerialName("stats") val stats: TorboxUserStatsDto? = null,
+)
+
+@Serializable
 internal data class TorboxCachedItemDto(
     val name: String? = null,
     val size: Long? = null,
@@ -189,6 +209,7 @@ internal data class PremiumizeAccountInfoDto(
     @SerialName("customer_id") val customerId: String? = null,
     @SerialName("premium_until") val premiumUntil: Long? = null,
     @SerialName("limit_used") val limitUsed: Double? = null,
+    @SerialName("space_used") val spaceUsed: Long? = null,
     @SerialName("booster_points") val boosterPoints: Int? = null,
 )
 
