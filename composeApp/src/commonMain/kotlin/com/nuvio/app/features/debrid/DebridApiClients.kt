@@ -68,7 +68,7 @@ internal object TorboxApiClient {
     ): DebridApiResponse<TorboxEnvelopeDto<TorboxUserStatsDto>> =
         request(
             method = "GET",
-            url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidthGrouping=day",
+            url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidth_grouping=day",
             apiKey = apiKey,
         )
 

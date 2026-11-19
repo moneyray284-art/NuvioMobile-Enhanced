@@ -1109,6 +1109,7 @@
     <string name="settings_debrid_torbox_linked_account">Linked account</string>
     <string name="settings_debrid_torbox_plan_tier">Plan tier</string>
     <string name="settings_debrid_torbox_active">Active</string>
+    <string name="settings_debrid_torbox_auto_renew">Auto-renew</string>
     <string name="settings_debrid_torbox_free_status">Free</string>
     <string name="settings_debrid_torbox_renewal">Renewal</string>
     <string name="settings_debrid_torbox_expiry_unavailable">Expiry date unavailable</string>
@@ -1118,8 +1119,11 @@
     <string name="settings_debrid_torbox_today">Today</string>
     <string name="settings_debrid_torbox_monthly">Monthly (30d)</string>
     <string name="settings_debrid_torbox_total">Total</string>
+    <string name="settings_debrid_torbox_download_count">%1$d download</string>
+    <string name="settings_debrid_torbox_download_count_plural">%1$d downloads</string>
     <string name="settings_debrid_torbox_usage">30-day usage · %1$s of %2$s</string>
     <string name="settings_debrid_torbox_usage_unavailable">Usage stats are currently unavailable.</string>
+    <string name="settings_debrid_torbox_usage_problem">Some TorBox usage data could not be loaded: %1$s</string>
     <string name="settings_debrid_torbox_cooldown">Cooldown active until %1$s</string>
     <string name="settings_debrid_torbox_load_failed">Could not load TorBox account details.</string>
     <string name="settings_debrid_torbox_retry">Retry</string>

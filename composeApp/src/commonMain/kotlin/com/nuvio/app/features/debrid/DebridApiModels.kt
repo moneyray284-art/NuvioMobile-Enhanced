@@ -24,21 +24,10 @@ internal data class TorboxUserMeDto(
 
 @Serializable
 internal data class TorboxUserStatsDto(
-    @SerialName("total_downloaded_bandwidth") val totalDownloadedBandwidth: Long = 0L,
-    @SerialName("bandwidth_usage") val bandwidthUsage: List<TorboxBandwidthUsageBucketDto> = emptyList(),
+    @SerialName("total_downloaded_bandwidth") val totalDownloadedBandwidth: JsonElement? = null,
+    @SerialName("total_download") val totalDownload: JsonElement? = null,
+    @SerialName("bandwidth_usage") val bandwidthUsage: JsonElement? = null,
 )
-
-@Serializable
-internal data class TorboxBandwidthUsageBucketDto(
-    @SerialName("time_group") val timeGroup: String = "",
-    val cdn: Long = 0L,
-    val webdav: Long = 0L,
-    val zips: Long = 0L,
-    @SerialName("uncached_torrents") val uncachedTorrents: Long = 0L,
-) {
-    val downloadedBytes: Long
-        get() = cdn + webdav + zips + uncachedTorrents
-}
 
 @Serializable
 internal data class TorboxCreateTorrentDataDto(
@@ -85,6 +74,7 @@ internal data class TorboxCloudItemDto(
     @SerialName("download_progress") val downloadProgress: Double? = null,
     val size: Long? = null,
     @SerialName("total_size") val totalSize: Long? = null,
+    @SerialName("created_at") val createdAt: JsonElement? = null,
     val files: List<TorboxCloudFileDto>? = null,
 )
 

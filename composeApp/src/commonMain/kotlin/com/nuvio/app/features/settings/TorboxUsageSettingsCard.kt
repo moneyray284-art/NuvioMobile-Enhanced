@@ -42,8 +42,11 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_active
+import nuvio.composeapp.generated.resources.settings_debrid_torbox_auto_renew
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_cooldown
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_days_left
+import nuvio.composeapp.generated.resources.settings_debrid_torbox_download_count
+import nuvio.composeapp.generated.resources.settings_debrid_torbox_download_count_plural
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_expiry_unavailable
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_free_status
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_linked_account
@@ -58,6 +61,7 @@ import nuvio.composeapp.generated.resources.settings_debrid_torbox_today
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_total
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_upgrade
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_usage
+import nuvio.composeapp.generated.resources.settings_debrid_torbox_usage_problem
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_usage_unavailable
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
@@ -172,6 +176,16 @@ internal fun TorboxUsageSettingsCard(
                 )
                 HorizontalDivider(color = tokens.colors.borderSubtle)
                 UsageSummary(usage = usage)
+                usage.usageErrorMessage?.let { errorMessage ->
+                    Text(
+                        text = stringResource(
+                            Res.string.settings_debrid_torbox_usage_problem,
+                            errorMessage,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tokens.colors.warning,
+                    )
+                }
                 if (usage.cooldownUntil != null) {
                     Text(
                         text = stringResource(
@@ -207,7 +221,7 @@ private fun PlanAndRenewalRow(
                 color = tokens.colors.textMuted,
             )
             Text(
-                text = usage.plan.displayName,
+                text = usage.planDisplayName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = tokens.colors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -216,14 +230,18 @@ private fun PlanAndRenewalRow(
             )
             Text(
                 text = stringResource(
-                    if (usage.isSubscribed) {
-                        Res.string.settings_debrid_torbox_active
-                    } else {
-                        Res.string.settings_debrid_torbox_free_status
+                    when {
+                        usage.isSubscribed -> Res.string.settings_debrid_torbox_auto_renew
+                        usage.isActivePlan -> Res.string.settings_debrid_torbox_active
+                        else -> Res.string.settings_debrid_torbox_free_status
                     },
                 ),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (usage.isSubscribed) tokens.colors.success else tokens.colors.textMuted,
+                color = if (usage.isSubscribed || usage.isActivePlan) {
+                    tokens.colors.success
+                } else {
+                    tokens.colors.textMuted
+                },
             )
         }
 
@@ -237,7 +255,7 @@ private fun PlanAndRenewalRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = tokens.colors.textMuted,
             )
-            if (!usage.isSubscribed) {
+            if (!usage.isSubscribed && !usage.isActivePlan) {
                 Text(
                     text = stringResource(Res.string.settings_debrid_torbox_no_active_renewal),
                     style = MaterialTheme.typography.bodySmall,
@@ -303,7 +321,15 @@ private fun UsageSummary(usage: TorboxAccountUsage) {
         )
         UsageStat(
             label = stringResource(Res.string.settings_debrid_torbox_total),
-            value = formatTorboxBytes(usage.totalDownloadedBytes),
+            value = usage.totalDownloadedBytes?.let(::formatTorboxBytes)
+                ?: stringResource(
+                    if (usage.totalDownloads == 1L) {
+                        Res.string.settings_debrid_torbox_download_count
+                    } else {
+                        Res.string.settings_debrid_torbox_download_count_plural
+                    },
+                    usage.totalDownloads,
+                ),
             valueColor = tokens.colors.accent,
             modifier = Modifier.weight(1f),
         )
