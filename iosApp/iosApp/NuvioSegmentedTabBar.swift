@@ -31,6 +31,8 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
     let onReselect: (Int) -> Void
     let onLongPress: (Int) -> Void
     let onCollapsedTap: () -> Void
+    let onCollapsedSwipeUp: () -> Void
+    let onExpandedSwipeDown: () -> Void
 
     func makeUIView(context: Context) -> NuvioSegmentedTabBarView {
         let view = NuvioSegmentedTabBarView()
@@ -63,6 +65,8 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
             control.selectedSegmentIndex = selectedIndex
         }
         view.onCollapsedTap = onCollapsedTap
+        view.onCollapsedSwipeUp = onCollapsedSwipeUp
+        view.onExpandedSwipeDown = onExpandedSwipeDown
         view.onCollapsedLongPress = { onLongPress(selectedIndex) }
         if items.indices.contains(selectedIndex) {
             let item = items[selectedIndex]
@@ -83,6 +87,8 @@ final class NuvioSegmentedTabBarView: UIView {
     var appliedContentKey: String?
     var onCollapsedTap: () -> Void = {}
     var onCollapsedLongPress: () -> Void = {}
+    var onCollapsedSwipeUp: () -> Void = {}
+    var onExpandedSwipeDown: () -> Void = {}
 
     private let glassView: UIVisualEffectView
     private let collapsedIcon = UIImageView()
@@ -95,6 +101,16 @@ final class NuvioSegmentedTabBarView: UIView {
     private var controlWidthConstraint: NSLayoutConstraint!
     private var controlHeightConstraint: NSLayoutConstraint!
     private lazy var collapsedTap = UITapGestureRecognizer(target: self, action: #selector(handleCollapsedTap))
+    private lazy var collapsedSwipeUp: UISwipeGestureRecognizer = {
+        let recognizer = UISwipeGestureRecognizer(target: self, action: #selector(handleCollapsedSwipeUp))
+        recognizer.direction = .up
+        return recognizer
+    }()
+    private lazy var expandedSwipeDown: UISwipeGestureRecognizer = {
+        let recognizer = UISwipeGestureRecognizer(target: self, action: #selector(handleExpandedSwipeDown))
+        recognizer.direction = .down
+        return recognizer
+    }()
     private lazy var collapsedLongPress: UILongPressGestureRecognizer = {
         let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleCollapsedLongPress(_:)))
         recognizer.minimumPressDuration = 0.45
@@ -142,8 +158,12 @@ final class NuvioSegmentedTabBarView: UIView {
 
         glassView.addGestureRecognizer(collapsedTap)
         glassView.addGestureRecognizer(collapsedLongPress)
+        glassView.addGestureRecognizer(collapsedSwipeUp)
+        glassView.addGestureRecognizer(expandedSwipeDown)
         collapsedTap.isEnabled = false
         collapsedLongPress.isEnabled = false
+        collapsedSwipeUp.isEnabled = false
+        expandedSwipeDown.isEnabled = false
     }
 
     @available(*, unavailable)
@@ -202,6 +222,8 @@ final class NuvioSegmentedTabBarView: UIView {
         segmentedControl.isUserInteractionEnabled = isExpanded
         collapsedTap.isEnabled = !isExpanded
         collapsedLongPress.isEnabled = !isExpanded
+        collapsedSwipeUp.isEnabled = !isExpanded
+        expandedSwipeDown.isEnabled = isExpanded
     }
 
     override func layoutSubviews() {
@@ -222,6 +244,14 @@ final class NuvioSegmentedTabBarView: UIView {
 
     @objc private func handleCollapsedTap() {
         onCollapsedTap()
+    }
+
+    @objc private func handleCollapsedSwipeUp() {
+        onCollapsedSwipeUp()
+    }
+
+    @objc private func handleExpandedSwipeDown() {
+        onExpandedSwipeDown()
     }
 
     @objc private func handleCollapsedLongPress(_ recognizer: UILongPressGestureRecognizer) {
