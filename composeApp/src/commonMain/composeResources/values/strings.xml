@@ -762,8 +762,6 @@
     <string name="settings_tab_bar_behavior_auto_hide_description">Slides away when you scroll down, returns when you scroll up.</string>
     <string name="settings_tab_bar_behavior_morphed">Morphed</string>
     <string name="settings_tab_bar_behavior_morphed_description">Shrinks to a compact pill when you scroll down, expands when you scroll up.</string>
-    <string name="settings_tab_bar_behavior_compact">Compact</string>
-    <string name="settings_tab_bar_behavior_compact_description">Starts as a compact floating pill and adapts on swipe or scroll.</string>
     <string name="settings_appearance_dynamic_artwork_background_description">Tint the home screen with a soft gradient built from the featured artwork's colours.</string>
     <string name="settings_appearance_app_icon">App Icon</string>
     <string name="settings_appearance_app_icon_arctic_blue">Arctic Blue</string>

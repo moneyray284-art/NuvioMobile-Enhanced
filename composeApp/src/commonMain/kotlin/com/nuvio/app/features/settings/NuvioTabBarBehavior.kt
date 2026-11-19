@@ -3,8 +3,6 @@ package com.nuvio.app.features.settings
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_auto_hide
 import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_auto_hide_description
-import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_compact
-import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_compact_description
 import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_morphed
 import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_morphed_description
 import nuvio.composeapp.generated.resources.settings_tab_bar_behavior_off
@@ -45,19 +43,14 @@ enum class NuvioTabBarBehavior(
         labelRes = Res.string.settings_tab_bar_behavior_morphed,
         descriptionRes = Res.string.settings_tab_bar_behavior_morphed_description,
     ),
-    COMPACT(
-        key = "compact",
-        labelRes = Res.string.settings_tab_bar_behavior_compact,
-        descriptionRes = Res.string.settings_tab_bar_behavior_compact_description,
-    ),
     ;
 
     val isEnabled: Boolean
         get() = this != OFF
 
-    /** AUTO_HIDE, MORPHED, and COMPACT react to scrolling; STATIC keeps the bar pinned. */
+    /** Only AUTO_HIDE and MORPHED react to scrolling; STATIC keeps the bar pinned. */
     val respondsToScroll: Boolean
-        get() = this == AUTO_HIDE || this == MORPHED || this == COMPACT
+        get() = this == AUTO_HIDE || this == MORPHED
 
     companion object {
         val Default: NuvioTabBarBehavior = MORPHED

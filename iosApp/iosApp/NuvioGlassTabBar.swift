@@ -7,7 +7,6 @@ enum NuvioTabBarBehavior: String, CaseIterable {
     case `static`
     case autoHide = "auto_hide"
     case morphed
-    case compact
 
     static let storageKey = "NuvioNativeTabBarBehavior"
     static let fallback: NuvioTabBarBehavior = .morphed
@@ -19,9 +18,9 @@ enum NuvioTabBarBehavior: String, CaseIterable {
 
     var isEnabled: Bool { self != .off }
 
-    var usesCompactPill: Bool { self == .morphed || self == .compact }
+    var usesCompactPill: Bool { self == .morphed }
 
-    var respondsToScroll: Bool { self == .autoHide || self == .morphed || self == .compact }
+    var respondsToScroll: Bool { self == .autoHide || self == .morphed }
 }
 
 struct NuvioTabBarItemMetrics: Equatable {
@@ -176,20 +175,6 @@ struct NuvioGlassTabBar: View {
                     Self.tapFeedback.prepare()
                 }
                 appCoordinator.requestTabBarVisible(true)
-            },
-            onCollapsedSwipeUp: {
-                if Self.tapHapticsEnabled {
-                    Self.tapFeedback.impactOccurred()
-                    Self.tapFeedback.prepare()
-                }
-                appCoordinator.requestTabBarVisible(true)
-            },
-            onExpandedSwipeDown: {
-                if Self.tapHapticsEnabled {
-                    Self.tapFeedback.impactOccurred()
-                    Self.tapFeedback.prepare()
-                }
-                appCoordinator.requestTabBarVisible(false)
             }
         )
         .frame(height: NuvioSegmentedTabBar.height(compact: isCompactHeight))

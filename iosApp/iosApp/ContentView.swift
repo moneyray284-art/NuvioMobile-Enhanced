@@ -1055,16 +1055,7 @@ final class AppNavigationCoordinator: ObservableObject {
 
     init() {
         PlayerPictureInPictureParking.shared.appCoordinator = self
-        if tabBarBehavior.respondsToScroll,
-           let storedVisibility = UserDefaults.standard.object(
-               forKey: Self.nativeTabBarVisibleKey
-           ) as? Bool {
-            setTabBarVisible(storedVisibility)
-        } else if tabBarBehavior == .compact {
-            setTabBarVisible(false)
-        } else if !tabBarBehavior.respondsToScroll {
-            setTabBarVisible(true)
-        }
+        setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
         NativeTabBridgeKt.observeNativePopToRoot { [weak self] tabName in
@@ -1074,10 +1065,7 @@ final class AppNavigationCoordinator: ObservableObject {
         }
         NativeTabBridgeKt.observeNativeTabBarVisible { [weak self] visible in
             guard let self else { return }
-            self.setTabBarVisible(
-                visible.boolValue,
-                animated: self.tabBarBehavior == .morphed || self.tabBarBehavior == .compact
-            )
+            self.setTabBarVisible(visible.boolValue, animated: self.tabBarBehavior == .morphed)
         }
         allCoordinators.forEach { coordinator in
             coordinator.onReturnedToRoot = { [weak self] in
@@ -1115,8 +1103,6 @@ final class AppNavigationCoordinator: ObservableObject {
         tabBarBehavior = behavior
         if !behavior.respondsToScroll {
             setTabBarVisible(true)
-        } else if behavior == .compact {
-            setTabBarVisible(false)
         }
     }
 
@@ -1128,7 +1114,7 @@ final class AppNavigationCoordinator: ObservableObject {
     }
 
     func requestTabBarVisible(_ visible: Bool) {
-        setTabBarVisible(visible, animated: tabBarBehavior == .morphed || tabBarBehavior == .compact)
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
     }
 
     func reloadTabBarVisibility() {
@@ -1139,12 +1125,9 @@ final class AppNavigationCoordinator: ObservableObject {
         guard let visible = UserDefaults.standard.object(
             forKey: Self.nativeTabBarVisibleKey
         ) as? Bool else {
-            if tabBarBehavior == .compact {
-                setTabBarVisible(false)
-            }
             return
         }
-        setTabBarVisible(visible, animated: tabBarBehavior == .morphed || tabBarBehavior == .compact)
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
     }
 
     private func setTabBarVisible(_ visible: Bool, animated: Bool = false) {
