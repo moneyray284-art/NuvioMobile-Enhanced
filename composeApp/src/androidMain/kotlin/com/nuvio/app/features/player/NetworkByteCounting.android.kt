@@ -34,3 +34,10 @@ internal fun DataSource.Factory.countingTorboxPlaybackBytes(listener: TransferLi
         base.createDataSource().also { it.addTransferListener(listener) }
     }
 }
+
+internal fun DataSource.Factory.countingPremiumizePlaybackBytes(listener: TransferListener): DataSource.Factory {
+    val base = this
+    return DataSource.Factory {
+        base.createDataSource().also { it.addTransferListener(listener) }
+    }
+}

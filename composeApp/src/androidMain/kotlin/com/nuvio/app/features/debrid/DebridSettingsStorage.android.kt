@@ -32,6 +32,7 @@ actual object DebridSettingsStorage {
     private const val streamDescriptionTemplateKey = "debrid_stream_description_template"
     private const val pendingDeviceAuthorizationPrefix = "debrid_pending_device_authorization_"
     private const val torboxUsageDailyBytesKey = "debrid_torbox_usage_daily_bytes"
+    private const val premiumizeUsageDailyBytesKey = "debrid_premiumize_usage_daily_bytes"
     private fun syncKeys(): List<String> =
         listOf(
             enabledKey,
@@ -170,6 +171,12 @@ actual object DebridSettingsStorage {
 
     actual fun saveTorboxUsageDailyBytes(value: String) {
         saveString(torboxUsageDailyBytesKey, value)
+    }
+
+    actual fun loadPremiumizeUsageDailyBytes(): String? = loadString(premiumizeUsageDailyBytesKey)
+
+    actual fun savePremiumizeUsageDailyBytes(value: String) {
+        saveString(premiumizeUsageDailyBytesKey, value)
     }
 
     private fun loadBoolean(key: String): Boolean? =

@@ -33,6 +33,7 @@ import com.nuvio.app.features.autosync.AutoSyncMpvCoordinator
 import com.nuvio.app.features.autosync.AutoSyncMpvEngineController
 import com.nuvio.app.features.autosync.IosAutoSyncMpvPlatform
 import com.nuvio.app.features.debrid.TorboxUsageRepository
+import com.nuvio.app.features.debrid.PremiumizeUsageRepository
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.delay
@@ -71,6 +72,7 @@ actual fun PlatformPlayerSurface(
     discPlaybackEnabled: Boolean,
     liveStream: Boolean,
     trackTorboxUsage: Boolean,
+    trackPremiumizeUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -129,6 +131,35 @@ actual fun PlatformPlayerSurface(
         } finally {
             withContext(NonCancellable) {
                 TorboxUsageRepository.recordStreamedBytes(pendingBytes)
+            }
+        }
+    }
+
+    LaunchedEffect(bridge, sourceUrl, trackPremiumizeUsage) {
+        if (!trackPremiumizeUsage) return@LaunchedEffect
+        var pendingBytes = 0L
+        var lastSampleAt = Clock.System.now().toEpochMilliseconds()
+        var lastFlushAt = lastSampleAt
+        try {
+            while (isActive) {
+                delay(1_000L)
+                val now = Clock.System.now().toEpochMilliseconds()
+                val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
+                lastSampleAt = now
+                if (bridge.getIsPlaying() || bridge.getIsLoading()) {
+                    val speed = bridge.networkSpeedBytesPerSecond().coerceAtLeast(0L)
+                    val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
+                    pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
+                }
+                if (!bridge.getIsPlaying() || now - lastFlushAt >= 10_000L) {
+                    PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
+                    pendingBytes = 0L
+                    lastFlushAt = now
+                }
+            }
+        } finally {
+            withContext(NonCancellable) {
+                PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
             }
         }
     }

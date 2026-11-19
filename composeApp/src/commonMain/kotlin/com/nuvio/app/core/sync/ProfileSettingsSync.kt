@@ -9,6 +9,7 @@ import com.nuvio.app.features.collection.CollectionMobileSettingsStorage
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.debrid.DebridSettingsStorage
 import com.nuvio.app.features.debrid.TorboxUsageRepository
+import com.nuvio.app.features.debrid.PremiumizeUsageRepository
 import com.nuvio.app.features.details.MetaScreenSettingsStorage
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.mdblist.MdbListMetadataService
@@ -317,6 +318,7 @@ object ProfileSettingsSync {
         )
         DebridSettingsRepository.onProfileChanged()
         TorboxUsageRepository.onProfileChanged()
+        PremiumizeUsageRepository.onProfileChanged()
 
         TmdbSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

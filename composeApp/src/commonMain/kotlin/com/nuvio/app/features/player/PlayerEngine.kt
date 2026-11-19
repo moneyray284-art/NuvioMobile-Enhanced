@@ -129,6 +129,8 @@ expect fun PlatformPlayerSurface(
     liveStream: Boolean = false,
     /** Records network bytes when this stream was resolved through TorBox. */
     trackTorboxUsage: Boolean = false,
+    /** Records network bytes when this stream was resolved through Premiumize. */
+    trackPremiumizeUsage: Boolean = false,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit = { _, _ -> },
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,

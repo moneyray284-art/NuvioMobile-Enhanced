@@ -40,6 +40,8 @@ internal expect object DebridSettingsStorage {
     fun clearPendingDeviceAuthorization(providerId: String)
     fun loadTorboxUsageDailyBytes(): String?
     fun saveTorboxUsageDailyBytes(value: String)
+    fun loadPremiumizeUsageDailyBytes(): String?
+    fun savePremiumizeUsageDailyBytes(value: String)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }

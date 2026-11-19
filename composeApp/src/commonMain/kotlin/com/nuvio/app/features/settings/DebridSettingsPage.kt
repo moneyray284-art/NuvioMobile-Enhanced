@@ -370,6 +370,15 @@ internal fun LazyListScope.debridSettingsContent(
         }
     }
 
+    if (settings.premiumizeApiKey.isNotBlank()) {
+        item {
+            PremiumizeUsageSettingsCard(
+                isTablet = isTablet,
+                apiKey = settings.premiumizeApiKey,
+            )
+        }
+    }
+
     if (!settings.canResolvePlayableLinks) {
         debridLearnMoreFooterItem(isTablet)
         return
