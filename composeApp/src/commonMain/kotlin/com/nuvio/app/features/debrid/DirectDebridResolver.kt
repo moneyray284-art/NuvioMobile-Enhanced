@@ -283,12 +283,14 @@ private class LocalDebridAddonStreamResolver(
             }
             val url = link.body?.data?.takeIf { it.isNotBlank() }
                 ?: return DirectDebridResolveResult.Stale
+            val videoSize = file.size ?: stream.behaviorHints.videoSize
+            TorboxUsageRepository.recordStreamedBytes(videoSize ?: 0L)
 
             DirectDebridResolveResult.Success(
                 url = url,
                 filename = file.displayName().takeIf { it.isNotBlank() }
                     ?: stream.behaviorHints.filename?.takeIf { it.isNotBlank() },
-                videoSize = file.size ?: stream.behaviorHints.videoSize,
+                videoSize = videoSize,
             )
         } catch (error: Exception) {
             if (error is CancellationException) throw error

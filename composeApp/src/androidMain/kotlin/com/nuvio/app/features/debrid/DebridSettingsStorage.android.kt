@@ -31,6 +31,7 @@ actual object DebridSettingsStorage {
     private const val streamNameTemplateKey = "debrid_stream_name_template"
     private const val streamDescriptionTemplateKey = "debrid_stream_description_template"
     private const val pendingDeviceAuthorizationPrefix = "debrid_pending_device_authorization_"
+    private const val torboxUsageDailyBytesKey = "debrid_torbox_usage_daily_bytes"
     private fun syncKeys(): List<String> =
         listOf(
             enabledKey,
@@ -163,6 +164,12 @@ actual object DebridSettingsStorage {
             ?.edit()
             ?.remove(ProfileScopedKey.of(pendingDeviceAuthorizationKey(providerId)))
             ?.apply()
+    }
+
+    actual fun loadTorboxUsageDailyBytes(): String? = loadString(torboxUsageDailyBytesKey)
+
+    actual fun saveTorboxUsageDailyBytes(value: String) {
+        saveString(torboxUsageDailyBytesKey, value)
     }
 
     private fun loadBoolean(key: String): Boolean? =

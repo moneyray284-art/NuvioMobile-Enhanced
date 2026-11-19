@@ -1,406 +1,330 @@
 package com.nuvio.app.features.debrid
 
+import kotlin.math.ceil
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.longOrNull
-import kotlin.math.ln
-import kotlin.math.pow
-import kotlin.time.Clock
-import kotlin.time.Instant
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.parseToJsonElement
+import kotlinx.serialization.json.put
+
+private const val DECIMAL_TB_BYTES = 1_000_000_000_000L
+private const val DAY_MS = 24L * 60L * 60L * 1000L
+private const val USAGE_WINDOW_DAYS = 30
+private const val USAGE_STORAGE_DAYS = 60
+private const val MIN_REFRESH_INTERVAL_MS = 60_000L
 
 internal enum class TorboxPlan(
     val displayName: String,
-    val allowanceBytes: Long,
+    val monthlyAllowanceBytes: Long,
 ) {
-    FREE("Free", 200L * 1024 * 1024 * 1024),
-    ESSENTIAL("Essential", 5L * 1024 * 1024 * 1024 * 1024),
-    STANDARD("Standard", 10L * 1024 * 1024 * 1024 * 1024),
-    PRO("Pro", 30L * 1024 * 1024 * 1024 * 1024);
+    FREE("Free", 5L * DECIMAL_TB_BYTES),
+    ESSENTIAL("Essential", 10L * DECIMAL_TB_BYTES),
+    STANDARD("Standard", 20L * DECIMAL_TB_BYTES),
+    PRO("Pro", 30L * DECIMAL_TB_BYTES),
+    ;
 
     companion object {
-        fun fromCode(code: Int): TorboxPlan = when (code) {
+        fun fromCode(code: Int?): TorboxPlan = when (code) {
             1 -> ESSENTIAL
             2 -> PRO
             3 -> STANDARD
             else -> FREE
         }
+
+        fun fromName(name: String?): TorboxPlan? {
+            val normalized = name?.trim()?.takeIf { it.isNotBlank() } ?: return null
+            return TorboxPlan.entries.firstOrNull { it.displayName.equals(normalized, ignoreCase = true) }
+        }
     }
 }
 
-internal data class TorboxAccountUsage(
-    val email: String,
-    val plan: TorboxPlan,
-    val planCode: Int,
-    val isSubscribed: Boolean,
-    val premiumExpiresAt: String?,
-    val hasFuturePremiumExpiry: Boolean,
-    val daysUntilRenewal: Long?,
-    val cooldownUntil: String?,
-    val todayDownloadedBytes: Long?,
-    val monthlyDownloadedBytes: Long?,
-    val totalDownloadedBytes: Long?,
-    val totalDownloads: Long,
-    val usageErrorMessage: String?,
-) {
-    val planDisplayName: String
-        get() = when {
-            planCode == 0 && hasFuturePremiumExpiry -> "Active"
-            planCode > 0 && plan == TorboxPlan.FREE -> "Plan $planCode"
-            else -> plan.displayName
-        }
-
-    val isActivePlan: Boolean
-        get() = planCode > 0 || hasFuturePremiumExpiry
-
-    val monthlyUsageRatio: Float?
-        get() = monthlyDownloadedBytes?.let {
-            it.toFloat() / plan.allowanceBytes.coerceAtLeast(1L).toFloat()
-        }
-}
+internal data class TorboxUsageUiState(
+    val isLoading: Boolean = false,
+    val plan: TorboxPlan? = null,
+    val isSubscribed: Boolean = false,
+    val expiryEpochMs: Long? = null,
+    val cooldownEpochMs: Long? = null,
+    val daysLeft: Long? = null,
+    val todayDownloadedBytes: Long = 0L,
+    val monthlyDownloadedBytes: Long = 0L,
+    val loadFailed: Boolean = false,
+)
 
 internal object TorboxUsageRepository {
-    suspend fun fetchAccountUsage(apiKey: String): TorboxAccountUsage {
-        val normalizedApiKey = apiKey.trim().takeIf { it.isNotEmpty() }
-            ?: error("TorBox account is not linked.")
+    private val _uiState = MutableStateFlow(TorboxUsageUiState())
+    val uiState: StateFlow<TorboxUsageUiState> = _uiState.asStateFlow()
 
-        return coroutineScope {
-            val userDeferred = async {
-                TorboxApiClient.getUserMe(normalizedApiKey)
-                    .requireData("Unable to load TorBox account.")
-            }
-            val statsDeferred = async { fetchStats(normalizedApiKey) }
+    private val refreshMutex = Mutex()
+    private val stateMutex = Mutex()
+    private var hasLoadedLocal = false
+    private var dailyBytes: Map<String, Long> = emptyMap()
+    private var statsBytes: Map<String, Long> = emptyMap()
 
-            val user = userDeferred.await()
-            val statsResult = statsDeferred.await()
-            val now = Clock.System.now()
-            val todayUtc = now.toLocalDateTime(TimeZone.UTC).date.toString()
-            val parsedStats = statsResult.stats?.toUsage(todayUtc)
-            val needsCloudFallback = parsedStats?.let {
-                it.todayBytes == null || it.monthlyBytes == null || it.totalBytes == null
-            } ?: true
-            val cloudFallback = if (needsCloudFallback) {
-                fetchCloudFallback(normalizedApiKey, now, todayUtc)
-            } else {
-                null
-            }
+    private var plan: TorboxPlan? = null
+    private var isSubscribed = false
+    private var expiryEpochMs: Long? = null
+    private var cooldownEpochMs: Long? = null
+    private var lastRefreshAtMs = 0L
+    private var remoteLoaded = false
 
-            val premiumExpiry = user.premiumExpiresAt?.let(::parseInstant)
-            val hasFutureExpiry = premiumExpiry?.let { it > now } == true
-            val daysUntilRenewal = premiumExpiry
-                ?.takeIf { it > now }
-                ?.let { expiry ->
-                    ((expiry.toEpochMilliseconds() - now.toEpochMilliseconds()) / MILLIS_PER_DAY)
-                        .coerceAtLeast(0L)
+    fun ensureLoaded() {
+        if (hasLoadedLocal) return
+        hasLoadedLocal = true
+        dailyBytes = decodeDailyBytes(DebridSettingsStorage.loadTorboxUsageDailyBytes())
+        publish()
+    }
+
+    fun onProfileChanged() {
+        hasLoadedLocal = false
+        dailyBytes = emptyMap()
+        statsBytes = emptyMap()
+        plan = null
+        isSubscribed = false
+        expiryEpochMs = null
+        cooldownEpochMs = null
+        lastRefreshAtMs = 0L
+        remoteLoaded = false
+        _uiState.value = TorboxUsageUiState()
+        ensureLoaded()
+    }
+
+    suspend fun refresh(apiKey: String, force: Boolean = false) {
+        val normalizedApiKey = apiKey.trim()
+        if (normalizedApiKey.isBlank()) return
+        ensureLoaded()
+
+        if (!force && remoteLoaded && nowMs() - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
+
+        refreshMutex.withLock {
+            val startedAtMs = nowMs()
+            if (!force && remoteLoaded && startedAtMs - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
+            lastRefreshAtMs = startedAtMs
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            // Network calls happen outside the state lock so usage recording never waits on them.
+            val responses = try {
+                coroutineScope {
+                    val user = async { TorboxApiClient.fetchUser(normalizedApiKey) }
+                    val stats = async { TorboxApiClient.fetchUserStats(normalizedApiKey) }
+                    user.await() to stats.await()
                 }
-            val usageErrors = listOfNotNull(
-                statsResult.errorMessage,
-                parsedStats?.errorMessage,
-                cloudFallback?.errorMessage,
-            ).distinct()
-
-            TorboxAccountUsage(
-                email = user.email,
-                plan = TorboxPlan.fromCode(user.plan),
-                planCode = user.plan,
-                isSubscribed = user.isSubscribed,
-                premiumExpiresAt = user.premiumExpiresAt,
-                hasFuturePremiumExpiry = hasFutureExpiry,
-                daysUntilRenewal = daysUntilRenewal,
-                cooldownUntil = user.cooldownUntil,
-                todayDownloadedBytes = parsedStats?.todayBytes ?: cloudFallback?.todayBytes,
-                monthlyDownloadedBytes = parsedStats?.monthlyBytes ?: cloudFallback?.monthlyBytes,
-                totalDownloadedBytes = parsedStats?.totalBytes ?: cloudFallback?.totalBytes,
-                totalDownloads = user.totalDownloaded,
-                usageErrorMessage = usageErrors.takeIf { it.isNotEmpty() }?.joinToString(" "),
-            )
-        }
-    }
-
-    private suspend fun fetchStats(apiKey: String): StatsFetchResult = try {
-        val response = TorboxApiClient.getUserStats(apiKey)
-        val stats = response.requireData("Unable to load TorBox usage statistics.")
-        StatsFetchResult(stats = stats)
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (error: Exception) {
-        StatsFetchResult(
-            errorMessage = error.message?.takeIf(String::isNotBlank)
-                ?: "TorBox usage statistics could not be loaded.",
-        )
-    }
-
-    private suspend fun fetchCloudFallback(
-        apiKey: String,
-        now: Instant,
-        todayUtc: String,
-    ): CloudFallbackResult = coroutineScope {
-        val torrentsDeferred = async { fetchCloudList("torrents") { TorboxApiClient.listCloudTorrents(apiKey) } }
-        val usenetDeferred = async { fetchCloudList("usenet") { TorboxApiClient.listCloudUsenet(apiKey) } }
-        val webDownloadsDeferred = async {
-            fetchCloudList("web downloads") { TorboxApiClient.listCloudWebDownloads(apiKey) }
-        }
-        val results = listOf(
-            torrentsDeferred.await(),
-            usenetDeferred.await(),
-            webDownloadsDeferred.await(),
-        )
-        val items = results.flatMap { it.items.orEmpty() }
-        val hasAnySuccessfulList = results.any { it.items != null }
-        val cutoffMillis = now.toEpochMilliseconds() - THIRTY_DAYS_MILLIS
-        val sizedItems = items.mapNotNull { item ->
-            item.byteSize()?.let { size -> item to size }
-        }
-        val datedItems = sizedItems.mapNotNull { (item, size) ->
-            item.createdAt.asInstantOrNull()?.let { createdAt ->
-                DatedCloudSize(size = size, createdAt = createdAt)
-            }
-        }
-        val errors = results.mapNotNull(CloudListResult::errorMessage)
-
-        CloudFallbackResult(
-            todayBytes = if (hasAnySuccessfulList && datedItems.isNotEmpty()) {
-                datedItems.asSequence()
-                    .filter { it.createdAt.toLocalDateTime(TimeZone.UTC).date.toString() == todayUtc }
-                    .sumOf(DatedCloudSize::size)
-            } else {
+            } catch (error: CancellationException) {
+                stateMutex.withLock { publish(loading = false) }
+                throw error
+            } catch (_: Exception) {
                 null
-            },
-            monthlyBytes = if (hasAnySuccessfulList && datedItems.isNotEmpty()) {
-                datedItems.asSequence()
-                    .filter {
-                        it.createdAt.toEpochMilliseconds() in cutoffMillis..now.toEpochMilliseconds()
+            }
+
+            stateMutex.withLock {
+                var anySuccess = false
+                if (responses != null) {
+                    val (userResponse, statsResponse) = responses
+                    val userEnvelope = userResponse.body
+                        ?.takeIf { userResponse.isSuccessful && it.success != false }
+                    val statsEnvelope = statsResponse.body
+                        ?.takeIf { statsResponse.isSuccessful && it.success != false }
+
+                    userEnvelope?.data?.let { data ->
+                        parseUser(data)
+                        anySuccess = true
                     }
-                    .sumOf(DatedCloudSize::size)
-            } else {
-                null
-            },
-            totalBytes = if (hasAnySuccessfulList && sizedItems.isNotEmpty()) {
-                sizedItems.sumOf { (_, size) -> size }
-            } else {
-                null
-            },
-            errorMessage = errors.takeIf { it.isNotEmpty() }
-                ?.joinToString(prefix = "Cloud history fallback failed: ", separator = "; "),
-        )
-    }
+                    statsEnvelope?.data?.let { data ->
+                        statsBytes = parseBandwidthBytes(data)
+                        anySuccess = true
+                    }
+                }
 
-    private suspend fun fetchCloudList(
-        listName: String,
-        fetch: suspend () -> DebridApiResponse<TorboxEnvelopeDto<List<TorboxCloudItemDto>>>,
-    ): CloudListResult = try {
-        CloudListResult(items = fetch().requireData("Unable to load TorBox $listName history."))
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (error: Exception) {
-        CloudListResult(
-            errorMessage = error.message?.takeIf(String::isNotBlank)
-                ?: "Unable to load TorBox $listName history.",
-        )
-    }
-}
-
-private data class StatsFetchResult(
-    val stats: TorboxUserStatsDto? = null,
-    val errorMessage: String? = null,
-)
-
-private data class ParsedStatsUsage(
-    val todayBytes: Long?,
-    val monthlyBytes: Long?,
-    val totalBytes: Long?,
-    val errorMessage: String? = null,
-)
-
-private data class CloudListResult(
-    val items: List<TorboxCloudItemDto>? = null,
-    val errorMessage: String? = null,
-)
-
-private data class CloudFallbackResult(
-    val todayBytes: Long?,
-    val monthlyBytes: Long?,
-    val totalBytes: Long?,
-    val errorMessage: String?,
-)
-
-private data class BandwidthBucket(
-    val dateUtc: String?,
-    val bytes: Long,
-)
-
-private data class DatedCloudSize(
-    val size: Long,
-    val createdAt: Instant,
-)
-
-private fun TorboxUserStatsDto.toUsage(todayUtc: String): ParsedStatsUsage {
-    val buckets = parseBandwidthBuckets(bandwidthUsage)
-    val datedBuckets = buckets.filter { it.dateUtc != null }
-    val validBucketBytes = buckets.takeIf { it.isNotEmpty() }?.sumOf(BandwidthBucket::bytes)
-    val todayBytes = if (buckets.isNotEmpty() && datedBuckets.size == buckets.size) {
-        datedBuckets.asSequence()
-            .filter { it.dateUtc == todayUtc }
-            .sumOf(BandwidthBucket::bytes)
-    } else {
-        null
-    }
-    val monthlyBytes = validBucketBytes
-        ?: totalDownloadedBandwidth.asBytesOrNull()
-    val totalBytes = totalDownload.asBytesOrNull()
-        ?: totalDownloadedBandwidth.asBytesOrNull()
-
-    return ParsedStatsUsage(
-        todayBytes = todayBytes,
-        monthlyBytes = monthlyBytes,
-        totalBytes = totalBytes,
-        errorMessage = if (buckets.isEmpty() && monthlyBytes == null && totalBytes == null) {
-            "TorBox returned no recognized byte usage fields."
-        } else {
-            null
-        },
-    )
-}
-
-private fun parseBandwidthBuckets(element: JsonElement?): List<BandwidthBucket> =
-    when (element) {
-        is JsonArray -> element.flatMap { parseBandwidthBuckets(it, fallbackDateUtc = null) }
-        is JsonObject -> parseBandwidthBuckets(element, fallbackDateUtc = null)
-        else -> emptyList()
-    }
-
-private fun parseBandwidthBuckets(
-    element: JsonElement,
-    fallbackDateUtc: String?,
-): List<BandwidthBucket> = when (element) {
-    is JsonArray -> element.flatMap { parseBandwidthBuckets(it, fallbackDateUtc) }
-    is JsonObject -> {
-        val bytes = element.readBucketBytes()
-        if (bytes != null) {
-            listOf(BandwidthBucket(dateUtc = element.readBucketDateUtc() ?: fallbackDateUtc, bytes = bytes))
-        } else {
-            element.entries.flatMap { (key, value) ->
-                parseBandwidthBuckets(value, parseUtcDate(key) ?: fallbackDateUtc)
+                if (anySuccess) {
+                    remoteLoaded = true
+                }
+                publish(loading = false, failed = !anySuccess)
             }
         }
     }
-    is JsonPrimitive -> {
-        val bytes = element.asBytesOrNull()
-        val date = fallbackDateUtc
-        if (bytes != null && date != null) listOf(BandwidthBucket(dateUtc = date, bytes = bytes)) else emptyList()
+
+    suspend fun recordStreamedBytes(bytes: Long) {
+        if (bytes <= 0L) return
+        ensureLoaded()
+        val nowMs = nowMs()
+        stateMutex.withLock {
+            val dateKey = utcDateKey(nowMs)
+            val next = dailyBytes.toMutableMap()
+            next[dateKey] = (next[dateKey] ?: 0L).safeAdd(bytes)
+            dailyBytes = pruneDailyBytes(next, nowMs)
+            DebridSettingsStorage.saveTorboxUsageDailyBytes(encodeDailyBytes(dailyBytes))
+            publish()
+        }
     }
-    else -> emptyList()
-}
 
-private fun JsonObject.readBucketBytes(): Long? {
-    val categoryKeys = listOf(
-        "cdn",
-        "storage",
-        "webdav",
-        "zips",
-        "uncached_torrents",
-        "uncached_torrent",
-        "seeding",
-        "cloud_uploads",
-        "third_party_clouds",
-        "upload",
-    )
-    val categoryValues = categoryKeys.mapNotNull { key -> this[key].asBytesOrNull() }
-    if (categoryValues.isNotEmpty()) return categoryValues.sum()
+    private fun parseUser(element: JsonElement) {
+        val user = when (element) {
+            is JsonObject -> element
+            is JsonArray -> element.firstOrNull() as? JsonObject
+            else -> null
+        } ?: return
 
-    val directByteKeys = listOf(
-        "total_download",
-        "total_downloaded_bandwidth",
-        "downloaded_bytes",
-        "bytes_downloaded",
-        "total_downloaded_bytes",
-        "total_bytes",
-        "bytes",
-        "download",
-    )
-    return directByteKeys.firstNotNullOfOrNull { key -> this[key].asBytesOrNull() }
-}
+        val planElement = user["plan"]
+        val planCode = planElement?.intValueOrNull()
+        val planName = planElement?.stringValueOrNull()
+        when {
+            planCode != null -> plan = TorboxPlan.fromCode(planCode)
+            !planName.isNullOrBlank() -> TorboxPlan.fromName(planName)?.let { plan = it }
+        }
 
-private fun JsonObject.readBucketDateUtc(): String? {
-    val dateKeys = listOf("time_group", "date", "day", "timestamp", "created_at", "time")
-    return dateKeys.firstNotNullOfOrNull { key -> this[key].asDateUtcOrNull() }
-}
+        isSubscribed = user["is_subscribed"]?.booleanValueOrNull()
+            ?: user["isSubscribed"]?.booleanValueOrNull()
+            ?: false
 
-private fun JsonElement?.asBytesOrNull(): Long? = when (this) {
-    is JsonPrimitive -> asBytesOrNull()
-    is JsonObject -> readBucketBytes()
-    else -> null
-}
+        expiryEpochMs = timestampMs(user["premium_expires_at"])
+            ?: timestampMs(user["subscription_expires_at"])
 
-private fun JsonPrimitive.asBytesOrNull(): Long? {
-    if (content == "null" || content.isBlank()) return null
-    return (longOrNull ?: content.toDoubleOrNull()?.toLong())?.takeIf { it >= 0L }
-}
-
-private fun JsonElement?.asDateUtcOrNull(): String? = when (this) {
-    is JsonPrimitive -> parseUtcDate(content)
-    else -> null
-}
-
-private fun JsonElement?.asInstantOrNull(): Instant? = when (this) {
-    is JsonPrimitive -> parseInstant(content)
-    else -> null
-}
-
-private fun TorboxCloudItemDto.byteSize(): Long? = (size ?: totalSize)?.takeIf { it >= 0L }
-
-private fun parseInstant(value: String): Instant? {
-    val text = value.trim()
-    if (text.isEmpty()) return null
-    val parsed = runCatching { Instant.parse(text) }.getOrNull()
-    if (parsed != null) return parsed
-
-    val numericTime = text.toLongOrNull() ?: return null
-    val millis = when {
-        numericTime >= MILLIS_TIMESTAMP_THRESHOLD -> numericTime
-        numericTime >= SECONDS_TIMESTAMP_THRESHOLD -> numericTime * 1000L
-        else -> return null
+        cooldownEpochMs = timestampMs(user["cooldown_until"])
+            ?: timestampMs(user["cooldownUntil"])
     }
-    return runCatching { Instant.fromEpochMilliseconds(millis) }.getOrNull()
-}
 
-private fun parseUtcDate(value: String?): String? {
-    val text = value?.trim()?.takeIf(String::isNotEmpty) ?: return null
-    val instant = parseInstant(text)
-    if (instant != null) return instant.toLocalDateTime(TimeZone.UTC).date.toString()
-    return text.take(10).takeIf { candidate ->
-        candidate.length == 10 && candidate[4] == '-' && candidate[7] == '-'
+    private fun parseBandwidthBytes(element: JsonElement): Map<String, Long> {
+        val stats = element as? JsonObject ?: return emptyMap()
+        val rows = stats["bandwidth"] as? JsonArray ?: return emptyMap()
+        val parsed = mutableMapOf<String, Long>()
+        rows.forEach { row ->
+            val rowObject = row as? JsonObject ?: return@forEach
+            val dateKey = rowObject["date"]?.toUtcDateKey() ?: return@forEach
+            val bytes = rowObject["bytes_downloaded"]?.longValueOrNull() ?: return@forEach
+            parsed[dateKey] = maxOf(parsed[dateKey] ?: 0L, bytes)
+        }
+        return parsed
     }
-}
 
-private fun <T> DebridApiResponse<TorboxEnvelopeDto<T>>.requireData(fallback: String): T {
-    val envelope = body
-    if (!isSuccessful || envelope == null || envelope.success == false) {
-        error(envelope?.detail ?: envelope?.error ?: "$fallback (HTTP $status).")
+    private fun publish(
+        loading: Boolean = _uiState.value.isLoading,
+        failed: Boolean = _uiState.value.loadFailed,
+    ) {
+        val nowMs = nowMs()
+        val keys = rollingUsageKeys(nowMs)
+        val todayKey = keys.first()
+
+        val localToday = dailyBytes[todayKey] ?: 0L
+        val localMonthly = keys.sumOf { dailyBytes[it] ?: 0L }
+        val remoteToday = statsBytes[todayKey] ?: 0L
+        val remoteMonthly = keys.sumOf { statsBytes[it] ?: 0L }
+
+        _uiState.value = TorboxUsageUiState(
+            isLoading = loading,
+            plan = plan,
+            isSubscribed = isSubscribed,
+            expiryEpochMs = expiryEpochMs,
+            cooldownEpochMs = cooldownEpochMs,
+            daysLeft = expiryEpochMs?.let { daysLeftFrom(it, nowMs) },
+            todayDownloadedBytes = maxOf(localToday, remoteToday),
+            monthlyDownloadedBytes = maxOf(localMonthly, remoteMonthly),
+            loadFailed = failed,
+        )
     }
-    return envelope.data ?: error(envelope.detail ?: envelope.error ?: fallback)
-}
 
-internal fun formatTorboxBytes(bytes: Long): String {
-    if (bytes <= 0L) return "0 B"
-    val units = listOf("B", "KB", "MB", "GB", "TB", "PB")
-    val exponent = (ln(bytes.toDouble()) / ln(1024.0)).toInt().coerceIn(0, units.lastIndex)
-    val value = bytes / 1024.0.pow(exponent)
-    val formatted = when {
-        value >= 100 -> value.toInt().toString()
-        value >= 10 -> ((value * 10).toInt() / 10.0).toString()
-        else -> ((value * 100).toInt() / 100.0).toString()
+    private fun rollingUsageKeys(nowMs: Long): List<String> =
+        (0 until USAGE_WINDOW_DAYS).map { offset -> utcDateKey(nowMs - offset * DAY_MS) }
+
+    private fun pruneDailyBytes(values: Map<String, Long>, nowMs: Long): Map<String, Long> {
+        val oldestKey = utcDateKey(nowMs - USAGE_STORAGE_DAYS * DAY_MS)
+        return values.filterKeys { it >= oldestKey }
     }
-    return "$formatted ${units[exponent]}"
+
+    private fun decodeDailyBytes(raw: String?): Map<String, Long> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        val root = runCatching { DebridApiJson.json.parseToJsonElement(raw) }
+            .getOrNull() as? JsonObject
+            ?: return emptyMap()
+        return root.mapNotNull { (dateKey, value) ->
+            if (!IsoDateRegex.matches(dateKey)) return@mapNotNull null
+            val bytes = (value as? JsonPrimitive)?.longValueOrNull() ?: return@mapNotNull null
+            dateKey to bytes
+        }.toMap()
+    }
+
+    private fun encodeDailyBytes(values: Map<String, Long>): String =
+        buildJsonObject {
+            values.entries.sortedBy { it.key }.forEach { (dateKey, bytes) -> put(dateKey, bytes) }
+        }.toString()
+
+    private fun daysLeftFrom(expiryMs: Long, nowMs: Long): Long {
+        val remaining = expiryMs - nowMs
+        if (remaining <= 0L) return 0L
+        return ceil(remaining.toDouble() / DAY_MS.toDouble()).toLong()
+    }
+
+    private fun nowMs(): Long = Clock.System.now().toEpochMilliseconds()
 }
 
-private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
-private const val THIRTY_DAYS_MILLIS = 30L * MILLIS_PER_DAY
-private const val SECONDS_TIMESTAMP_THRESHOLD = 1_000_000_000L
-private const val MILLIS_TIMESTAMP_THRESHOLD = 100_000_000_000L
+private val IsoDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
+private val ZoneSuffixRegex = Regex("""([zZ]|[+-]\d{2}:?\d{2})$""")
+
+private fun utcDateKey(epochMs: Long): String =
+    Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.UTC).date.toString()
+
+private fun JsonElement.toUtcDateKey(): String? {
+    val raw = stringValueOrNull()?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    if (IsoDateRegex.matches(raw)) return raw
+    val epochMs = parseTimestampMs(raw) ?: return null
+    return utcDateKey(epochMs)
+}
+
+private fun timestampMs(element: JsonElement?): Long? {
+    val primitive = element as? JsonPrimitive ?: return null
+    val raw = primitive.content.trim()
+    if (raw.isBlank()) return null
+    return parseTimestampMs(raw)
+}
+
+private fun parseTimestampMs(rawValue: String): Long? {
+    val raw = rawValue.trim()
+    if (raw.isBlank()) return null
+
+    val numeric = raw.toDoubleOrNull()
+    if (numeric != null) {
+        if (!numeric.isFinite() || numeric <= 0.0) return null
+        val value = numeric.toLong()
+        return if (value < 100_000_000_000L) value * 1000L else value
+    }
+
+    val candidate = if (IsoDateRegex.matches(raw)) "${raw}T00:00:00Z" else raw.replace(' ', 'T')
+    val zoned = if (ZoneSuffixRegex.containsMatchIn(candidate)) candidate else "${candidate}Z"
+    return runCatching { Instant.parse(candidate) }
+        .recoverCatching { Instant.parse(zoned) }
+        .getOrNull()
+        ?.toEpochMilliseconds()
+}
+
+private fun JsonElement.intValueOrNull(): Int? =
+    (this as? JsonPrimitive)?.content?.trim()?.toIntOrNull()
+
+private fun JsonElement.stringValueOrNull(): String? =
+    (this as? JsonPrimitive)?.content
+
+private fun JsonElement.booleanValueOrNull(): Boolean? =
+    (this as? JsonPrimitive)?.content?.trim()?.toBooleanStrictOrNull()
+
+private fun JsonElement.longValueOrNull(): Long? {
+    val raw = (this as? JsonPrimitive)?.content?.trim() ?: return null
+    val number = raw.toDoubleOrNull() ?: return null
+    if (!number.isFinite() || number < 0.0) return null
+    return number.toLong()
+}
+
+private fun Long.safeAdd(delta: Long): Long {
+    if (delta <= 0L) return this
+    return if (Long.MAX_VALUE - this < delta) Long.MAX_VALUE else this + delta
+}

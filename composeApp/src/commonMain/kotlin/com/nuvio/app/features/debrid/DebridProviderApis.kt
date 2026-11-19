@@ -124,6 +124,9 @@ private class TorboxDebridProviderApi(
             }
             val url = link.body?.data?.takeIf { it.isNotBlank() }
                 ?: return DirectDebridResolveResult.Stale
+            TorboxUsageRepository.recordStreamedBytes(
+                file.size ?: stream.behaviorHints.videoSize ?: 0L,
+            )
 
             DirectDebridResolveResult.Success(
                 url = url,

@@ -361,16 +361,14 @@ internal fun LazyListScope.debridSettingsContent(
             }
     }
 
-    settings.apiKeyFor(DebridProviders.TORBOX_ID)
-        .takeIf(String::isNotBlank)
-        ?.let { apiKey ->
-            item {
-                TorboxUsageSettingsCard(
-                    apiKey = apiKey,
-                    isTablet = isTablet,
-                )
-            }
+    if (settings.torboxApiKey.isNotBlank()) {
+        item {
+            TorboxUsageSettingsCard(
+                isTablet = isTablet,
+                apiKey = settings.torboxApiKey,
+            )
         }
+    }
 
     if (!settings.canResolvePlayableLinks) {
         debridLearnMoreFooterItem(isTablet)

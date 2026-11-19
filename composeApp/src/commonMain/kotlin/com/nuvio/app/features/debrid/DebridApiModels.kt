@@ -13,23 +13,6 @@ internal data class TorboxEnvelopeDto<T>(
 )
 
 @Serializable
-internal data class TorboxUserMeDto(
-    val email: String = "",
-    val plan: Int = 0,
-    @SerialName("is_subscribed") val isSubscribed: Boolean = false,
-    @SerialName("premium_expires_at") val premiumExpiresAt: String? = null,
-    @SerialName("cooldown_until") val cooldownUntil: String? = null,
-    @SerialName("total_downloaded") val totalDownloaded: Long = 0L,
-)
-
-@Serializable
-internal data class TorboxUserStatsDto(
-    @SerialName("total_downloaded_bandwidth") val totalDownloadedBandwidth: JsonElement? = null,
-    @SerialName("total_download") val totalDownload: JsonElement? = null,
-    @SerialName("bandwidth_usage") val bandwidthUsage: JsonElement? = null,
-)
-
-@Serializable
 internal data class TorboxCreateTorrentDataDto(
     @SerialName("torrent_id") val torrentId: Int? = null,
     val id: Int? = null,

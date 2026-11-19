@@ -8,6 +8,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 internal data class DebridApiResponse<T>(
     val status: Int,
@@ -52,27 +53,23 @@ internal object TorboxApiClient {
         )
 
     suspend fun validateApiKey(apiKey: String): Boolean =
-        getUser(apiKey.trim()).status in 200..299
+        getUserRaw(apiKey.trim()).status in 200..299
 
-    suspend fun getUserMe(
-        apiKey: String,
-    ): DebridApiResponse<TorboxEnvelopeDto<TorboxUserMeDto>> =
+    suspend fun fetchUser(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<JsonElement>> =
         request(
             method = "GET",
-            url = "$BASE_URL/v1/api/user/me?settings=false",
+            url = "$BASE_URL/v1/api/user/me",
             apiKey = apiKey,
         )
 
-    suspend fun getUserStats(
-        apiKey: String,
-    ): DebridApiResponse<TorboxEnvelopeDto<TorboxUserStatsDto>> =
+    suspend fun fetchUserStats(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<JsonElement>> =
         request(
             method = "GET",
             url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidth_grouping=day",
             apiKey = apiKey,
         )
 
-    private suspend fun getUser(apiKey: String): RawHttpResponse =
+    private suspend fun getUserRaw(apiKey: String): RawHttpResponse =
         httpRequestRaw(
             method = "GET",
             url = "$BASE_URL/v1/api/user/me",
