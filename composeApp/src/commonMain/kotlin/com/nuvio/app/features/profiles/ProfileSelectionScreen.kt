@@ -71,6 +71,7 @@ import com.nuvio.app.features.settings.SupporterBadgeIfPresent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -88,6 +89,19 @@ fun ProfileSelectionScreen(
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val greetings = remember {
+        listOf(
+            "Welcome back",
+            "Good to see you",
+            "Hey there",
+            "Back again",
+            "Glad you're here",
+            "Hello again",
+            "Ready to jump in?",
+            "Nice to see you",
+        )
+    }
+    var greetingIndex by remember { mutableStateOf(Random.nextInt(greetings.size)) }
     // Paired with the tapped avatar's on-screen center at the moment of the tap, so once the PIN
     // is verified the caller can still glide the transition emblem out from that exact spot.
     var pendingPinSelection by remember { mutableStateOf<Pair<NuvioProfile, Offset>?>(null) }
@@ -171,6 +185,14 @@ fun ProfileSelectionScreen(
     }
 
     LaunchedEffect(Unit) {
+        val previousIndex = ProfileStorage.loadLastSelectionGreetingIndex()
+        if (previousIndex == greetingIndex) {
+            greetingIndex = (greetingIndex + Random.nextInt(1, greetings.size)) % greetings.size
+        }
+        ProfileStorage.saveLastSelectionGreetingIndex(greetingIndex)
+    }
+
+    LaunchedEffect(Unit) {
         launch { titleAlpha.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
         launch { titleOffset.animateTo(0f, tween(600, easing = FastOutSlowInEasing)) }
         delay(300)
@@ -242,13 +264,23 @@ fun ProfileSelectionScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
               ) {
                 Text(
-                    text = stringResource(Res.string.profile_who_is_watching),
+                    text = greetings[greetingIndex],
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontSize = 30.sp,
                         letterSpacing = 0.sp,
                     ),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = titleAlpha.value
+                        translationY = titleOffset.value
+                    },
+                )
+
+                Text(
+                    text = stringResource(Res.string.profile_who_is_watching),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
                     modifier = Modifier.graphicsLayer {
                         alpha = titleAlpha.value
                         translationY = titleOffset.value

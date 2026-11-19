@@ -22,4 +22,17 @@ actual object ProfileStorage {
             ?.putString(payloadKey, payload)
             ?.apply()
     }
+
+    actual fun loadLastSelectionGreetingIndex(): Int? {
+        val values = preferences ?: return null
+        val key = "last_selection_greeting_index"
+        return if (values.contains(key)) values.getInt(key, -1).takeIf { it >= 0 } else null
+    }
+
+    actual fun saveLastSelectionGreetingIndex(index: Int) {
+        preferences
+            ?.edit()
+            ?.putInt("last_selection_greeting_index", index)
+            ?.apply()
+    }
 }
