@@ -18,7 +18,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.parseToJsonElement
 import kotlinx.serialization.json.put
 
 private const val DECIMAL_TB_BYTES = 1_000_000_000_000L
@@ -83,8 +82,15 @@ internal object TorboxUsageRepository {
 
     fun ensureLoaded() {
         if (hasLoadedLocal) return
+        val stored = runCatching {
+            decodeDailyBytes(DebridSettingsStorage.loadTorboxUsageDailyBytes())
+        }.getOrDefault(emptyMap())
+        val merged = stored.toMutableMap()
+        dailyBytes.forEach { (dateKey, bytes) ->
+            merged[dateKey] = maxOf(merged[dateKey] ?: 0L, bytes)
+        }
+        dailyBytes = merged
         hasLoadedLocal = true
-        dailyBytes = decodeDailyBytes(DebridSettingsStorage.loadTorboxUsageDailyBytes())
         publish()
     }
 
@@ -158,14 +164,22 @@ internal object TorboxUsageRepository {
 
     suspend fun recordStreamedBytes(bytes: Long) {
         if (bytes <= 0L) return
-        ensureLoaded()
         val nowMs = nowMs()
         stateMutex.withLock {
+            val stored = runCatching {
+                decodeDailyBytes(DebridSettingsStorage.loadTorboxUsageDailyBytes())
+            }.getOrDefault(emptyMap())
+            val next = stored.toMutableMap()
+            dailyBytes.forEach { (dateKey, value) ->
+                next[dateKey] = maxOf(next[dateKey] ?: 0L, value)
+            }
             val dateKey = utcDateKey(nowMs)
-            val next = dailyBytes.toMutableMap()
             next[dateKey] = (next[dateKey] ?: 0L).safeAdd(bytes)
             dailyBytes = pruneDailyBytes(next, nowMs)
-            DebridSettingsStorage.saveTorboxUsageDailyBytes(encodeDailyBytes(dailyBytes))
+            hasLoadedLocal = true
+            runCatching {
+                DebridSettingsStorage.saveTorboxUsageDailyBytes(encodeDailyBytes(dailyBytes))
+            }
             publish()
         }
     }
