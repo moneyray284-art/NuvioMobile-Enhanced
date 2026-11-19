@@ -238,16 +238,21 @@ private class LocalDebridAddonStreamResolver(
 
         return when (account.provider.id) {
             DebridProviders.TORBOX_ID -> resolveTorbox(stream, resolve, apiKey, magnet, season, episode)
-            DebridProviders.PREMIUMIZE_ID -> resolvePremiumizeDirectDownload(
-                apiKey = apiKey,
-                source = magnet,
-                resolve = resolve,
-                season = season,
-                episode = episode,
-                fallbackFilename = stream.behaviorHints.filename,
-                fallbackSize = stream.behaviorHints.videoSize,
-                fileSelector = premiumizeFileSelector,
-            )
+            DebridProviders.PREMIUMIZE_ID -> when (
+                val result = resolvePremiumizeDirectDownload(
+                    apiKey = apiKey,
+                    source = magnet,
+                    resolve = resolve,
+                    season = season,
+                    episode = episode,
+                    fallbackFilename = stream.behaviorHints.filename,
+                    fallbackSize = stream.behaviorHints.videoSize,
+                    fileSelector = premiumizeFileSelector,
+                )
+            ) {
+                is DirectDebridResolveResult.Success -> result.copy(providerId = account.provider.id)
+                else -> result
+            }
             else -> DirectDebridResolveResult.Error
         }
     }
@@ -290,7 +295,7 @@ private class LocalDebridAddonStreamResolver(
                 filename = file.displayName().takeIf { it.isNotBlank() }
                     ?: stream.behaviorHints.filename?.takeIf { it.isNotBlank() },
                 videoSize = videoSize,
-                providerId = account.provider.id,
+                providerId = DebridProviders.TORBOX_ID,
             )
         } catch (error: Exception) {
             if (error is CancellationException) throw error
