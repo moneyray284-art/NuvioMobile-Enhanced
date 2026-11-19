@@ -76,6 +76,7 @@ internal object TorboxUsageRepository {
     private var hasLoadedLocal = false
     private var dailyBytes: Map<String, Long> = emptyMap()
     private var statsBytes: Map<String, Long> = emptyMap()
+    private var statsLocalBaselineBytes: Map<String, Long> = emptyMap()
 
     private var plan: TorboxPlan? = null
     private var email: String? = null
@@ -103,6 +104,7 @@ internal object TorboxUsageRepository {
         hasLoadedLocal = false
         dailyBytes = emptyMap()
         statsBytes = emptyMap()
+        statsLocalBaselineBytes = emptyMap()
         plan = null
         email = null
         isSubscribed = false
@@ -126,6 +128,7 @@ internal object TorboxUsageRepository {
             if (!force && remoteLoaded && startedAtMs - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
             lastRefreshAtMs = startedAtMs
             _uiState.value = _uiState.value.copy(isLoading = true)
+            val localBytesAtRequestStart = stateMutex.withLock { dailyBytes.toMap() }
 
             // Network calls happen outside the state lock so usage recording never waits on them.
             val responses = try {
@@ -172,6 +175,7 @@ internal object TorboxUsageRepository {
                     }
                     statsEnvelope?.data?.let { data ->
                         statsBytes = parseBandwidthBytes(data)
+                        statsLocalBaselineBytes = localBytesAtRequestStart
                         anySuccess = true
                     }
                 }
@@ -277,10 +281,10 @@ internal object TorboxUsageRepository {
         val keys = rollingUsageKeys(nowMs)
         val todayKey = keys.first()
 
-        val localToday = dailyBytes[todayKey] ?: 0L
-        val localMonthly = keys.sumOf { dailyBytes[it] ?: 0L }
-        val remoteToday = statsBytes[todayKey] ?: 0L
-        val remoteMonthly = keys.sumOf { statsBytes[it] ?: 0L }
+        val todayUsage = combinedUsageFor(todayKey)
+        val monthlyUsage = keys.fold(0L) { total, dateKey ->
+            total.safeAdd(combinedUsageFor(dateKey))
+        }
 
         _uiState.value = TorboxUsageUiState(
             isLoading = loading,
@@ -290,10 +294,18 @@ internal object TorboxUsageRepository {
             expiryEpochMs = expiryEpochMs,
             cooldownEpochMs = cooldownEpochMs,
             daysLeft = expiryEpochMs?.let { daysLeftFrom(it, nowMs) },
-            todayDownloadedBytes = maxOf(localToday, remoteToday),
-            monthlyDownloadedBytes = maxOf(localMonthly, remoteMonthly),
+            todayDownloadedBytes = todayUsage,
+            monthlyDownloadedBytes = monthlyUsage,
             loadFailed = failed,
         )
+    }
+
+    private fun combinedUsageFor(dateKey: String): Long {
+        val localBytes = dailyBytes[dateKey] ?: 0L
+        val localBytesAtSnapshot = statsLocalBaselineBytes[dateKey] ?: 0L
+        val baselineBytes = maxOf(statsBytes[dateKey] ?: 0L, localBytesAtSnapshot)
+        val localBytesSinceSnapshot = (localBytes - localBytesAtSnapshot).coerceAtLeast(0L)
+        return baselineBytes.safeAdd(localBytesSinceSnapshot)
     }
 
     private fun rollingUsageKeys(nowMs: Long): List<String> {
