@@ -27,7 +27,7 @@ class AppIconRepositoryTest {
 
     @Test
     fun selectedIconsRestoreWhenThePlatformReportsOriginal() = runTest {
-        for (icon in AppIconOption.entries.drop(1) + AppIconOption.ORIGINAL) {
+        for (icon in AppIconOption.entries.filter { it != AppIconOption.ORIGINAL && it.isAvailableOnCurrentPlatform } + AppIconOption.ORIGINAL) {
             AppIconRepository.select(icon)
             assertEquals(icon.key, AppIconPlatform.loadSelectedIconKey())
             assertTrue(AppIconPlatform.activateIcon(null))

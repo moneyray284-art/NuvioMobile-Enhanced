@@ -9,7 +9,7 @@ internal actual object AppIconPlatform {
     actual val requiresCloseConfirmation: Boolean = true
 
     private const val launcherPackage = "com.nuvio.app.launcher"
-    private val launcherComponents = AppIconOption.entries.map { option ->
+    private val launcherComponents = AppIconOption.entries.filter { it.isAvailableOnCurrentPlatform }.map { option ->
         option.platformName to "$launcherPackage.${option.platformName ?: "AppIconDefault"}"
     }
 

@@ -13,6 +13,10 @@ internal val AppIconOption.labelResource: StringResource
         AppIconOption.ROSE_GOLD -> Res.string.settings_appearance_app_icon_rose_gold
         AppIconOption.COPPER -> Res.string.settings_appearance_app_icon_copper
         AppIconOption.GRAPHITE -> Res.string.settings_appearance_app_icon_graphite
+        AppIconOption.SUNSET -> Res.string.settings_appearance_app_icon_sunset
+        AppIconOption.CYBER_MINT -> Res.string.settings_appearance_app_icon_cyber_mint
+        AppIconOption.AMETHYST -> Res.string.settings_appearance_app_icon_amethyst
+        AppIconOption.SOLAR_FLARE -> Res.string.settings_appearance_app_icon_solar_flare
     }
 
 internal val AppIconOption.previewResource: DrawableResource
@@ -23,6 +27,10 @@ internal val AppIconOption.previewResource: DrawableResource
         AppIconOption.ROSE_GOLD -> Res.drawable.app_icon_rose_gold
         AppIconOption.COPPER -> Res.drawable.app_icon_copper
         AppIconOption.GRAPHITE -> Res.drawable.app_icon_graphite
+        AppIconOption.SUNSET -> Res.drawable.app_icon_sunset
+        AppIconOption.CYBER_MINT -> Res.drawable.app_icon_cyber_mint
+        AppIconOption.AMETHYST -> Res.drawable.app_icon_amethyst
+        AppIconOption.SOLAR_FLARE -> Res.drawable.app_icon_solar_flare
     }
 
 internal val AppIconOption.wordmarkResource: DrawableResource
@@ -33,6 +41,10 @@ internal val AppIconOption.wordmarkResource: DrawableResource
         AppIconOption.ROSE_GOLD -> Res.drawable.app_logo_wordmark_rose_gold
         AppIconOption.COPPER -> Res.drawable.app_logo_wordmark_copper
         AppIconOption.GRAPHITE -> Res.drawable.app_logo_wordmark_graphite
+        AppIconOption.SUNSET -> Res.drawable.app_logo_wordmark_sunset
+        AppIconOption.CYBER_MINT -> Res.drawable.app_logo_wordmark_cyber_mint
+        AppIconOption.AMETHYST -> Res.drawable.app_logo_wordmark_amethyst
+        AppIconOption.SOLAR_FLARE -> Res.drawable.app_logo_wordmark_solar_flare
     }
 
 internal fun AppTheme.wordmarkResource(fallback: AppIconOption): DrawableResource =
@@ -42,5 +54,9 @@ internal fun AppTheme.wordmarkResource(fallback: AppIconOption): DrawableResourc
         AppTheme.ROSE_GOLD -> AppIconOption.ROSE_GOLD.wordmarkResource
         AppTheme.ARCTIC_BLUE -> AppIconOption.ARCTIC_BLUE.wordmarkResource
         AppTheme.GRAPHITE -> AppIconOption.GRAPHITE.wordmarkResource
+        AppTheme.SUNSET -> AppIconOption.SUNSET.wordmarkResource
+        AppTheme.CYBER_MINT -> AppIconOption.CYBER_MINT.wordmarkResource
+        AppTheme.AMETHYST -> AppIconOption.AMETHYST.wordmarkResource
+        AppTheme.SOLAR_FLARE -> AppIconOption.SOLAR_FLARE.wordmarkResource
         else -> fallback.wordmarkResource
     }

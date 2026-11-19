@@ -771,6 +771,10 @@
     <string name="settings_appearance_app_icon_copper">Copper</string>
     <string name="settings_appearance_app_icon_emerald">Emerald</string>
     <string name="settings_appearance_app_icon_graphite">Graphite</string>
+    <string name="settings_appearance_app_icon_sunset">Sunset Glow</string>
+    <string name="settings_appearance_app_icon_cyber_mint">Cyber Mint</string>
+    <string name="settings_appearance_app_icon_amethyst">Cosmic Amethyst</string>
+    <string name="settings_appearance_app_icon_solar_flare">Solar Flare</string>
     <string name="settings_appearance_app_icon_original">Original</string>
     <string name="settings_appearance_app_icon_rose_gold">Rose Gold</string>
     <string name="settings_appearance_app_icon_sheet_title">Choose App Icon</string>
@@ -1755,6 +1759,10 @@
     <string name="theme_rose">Rose</string>
     <string name="theme_violet">Violet</string>
     <string name="theme_white">White</string>
+    <string name="theme_sunset">Sunset Glow</string>
+    <string name="theme_cyber_mint">Cyber Mint</string>
+    <string name="theme_amethyst">Cosmic Amethyst</string>
+    <string name="theme_solar_flare">Solar Flare</string>
     <string name="theme_custom">Custom</string>
     <string name="custom_theme_title">Your custom gradient</string>
     <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>

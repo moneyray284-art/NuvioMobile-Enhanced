@@ -173,6 +173,74 @@ object ThemeColors {
         backgroundCard = Color(0xFF222222),
     )
 
+    val Sunset = ThemeColorPalette(
+        secondary = Color(0xFFF044A7),
+        secondaryVariant = Color(0xFF8D55FF),
+        accentGradient = listOf(
+            Color(0xFF8D55FF),
+            Color(0xFFF044A7),
+            Color(0xFFFF7048),
+        ),
+        nativeAccentHex = "#FF7048",
+        focusRing = Color(0xFFFF7048),
+        focusBackground = Color(0xFF3D1A2A),
+        background = Color(0xFF100B0E),
+        backgroundElevated = Color(0xFF1E141B),
+        backgroundCard = Color(0xFF261822),
+    )
+
+    val CyberMint = ThemeColorPalette(
+        secondary = Color(0xFF2DDB83),
+        secondaryVariant = Color(0xFF14C8C8),
+        accentGradient = listOf(
+            Color(0xFFD5FF4F),
+            Color(0xFF2DDB83),
+            Color(0xFF14C8C8),
+        ),
+        nativeAccentHex = "#D5FF4F",
+        onSecondary = Color(0xFF111111),
+        onSecondaryVariant = Color(0xFF111111),
+        focusRing = Color(0xFFD5FF4F),
+        focusBackground = Color(0xFF1A3D2A),
+        background = Color(0xFF09100C),
+        backgroundElevated = Color(0xFF111E17),
+        backgroundCard = Color(0xFF16281F),
+    )
+
+    val Amethyst = ThemeColorPalette(
+        secondary = Color(0xFF984DFF),
+        secondaryVariant = Color(0xFF3B5BFF),
+        accentGradient = listOf(
+            Color(0xFF3B5BFF),
+            Color(0xFF984DFF),
+            Color(0xFFEA54FF),
+        ),
+        nativeAccentHex = "#EA54FF",
+        focusRing = Color(0xFFEA54FF),
+        focusBackground = Color(0xFF25183D),
+        background = Color(0xFF0B0B14),
+        backgroundElevated = Color(0xFF151424),
+        backgroundCard = Color(0xFF1C1B2F),
+    )
+
+    val SolarFlare = ThemeColorPalette(
+        secondary = Color(0xFFFF7324),
+        secondaryVariant = Color(0xFFFF3358),
+        accentGradient = listOf(
+            Color(0xFFFF3358),
+            Color(0xFFFF7324),
+            Color(0xFFFFD338),
+        ),
+        nativeAccentHex = "#FFD338",
+        onSecondary = Color(0xFF111111),
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFFFFD338),
+        focusBackground = Color(0xFF3D1F14),
+        background = Color(0xFF120B0A),
+        backgroundElevated = Color(0xFF221412),
+        backgroundCard = Color(0xFF2C1A17),
+    )
+
     fun getColorPalette(
         theme: AppTheme,
         customColors: CustomThemeColors = CustomThemeColors.Default,
@@ -190,5 +258,9 @@ object ThemeColors {
         AppTheme.AMBER -> Amber
         AppTheme.ROSE -> Rose
         AppTheme.WHITE -> White
+        AppTheme.SUNSET -> Sunset
+        AppTheme.CYBER_MINT -> CyberMint
+        AppTheme.AMETHYST -> Amethyst
+        AppTheme.SOLAR_FLARE -> SolarFlare
     }
 }

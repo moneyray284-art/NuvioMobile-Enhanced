@@ -1,6 +1,7 @@
 package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.ui.AppTheme
+import com.nuvio.app.isIos
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import nuvio.composeapp.generated.resources.Res
@@ -15,14 +16,15 @@ class AppIconOptionTest {
 
     @Test
     fun alternateIconNamesRoundTrip() {
-        AppIconOption.entries.drop(1).forEach { icon ->
+        AppIconOption.entries.filter { it != AppIconOption.ORIGINAL && it.isAvailableOnCurrentPlatform }.forEach { icon ->
             assertEquals(icon, AppIconOption.fromPlatformName(icon.platformName))
         }
     }
 
     @Test
-    fun shortlistedCatalogueContainsSixIcons() {
-        assertEquals(6, AppIconOption.entries.size)
+    fun iconCatalogueContainsAllOptionsAndFiltersByPlatform() {
+        assertEquals(10, AppIconOption.entries.size)
+        assertEquals(if (isIos) 10 else 6, AppIconOption.entries.count { it.isAvailableOnCurrentPlatform })
     }
 
     @Test

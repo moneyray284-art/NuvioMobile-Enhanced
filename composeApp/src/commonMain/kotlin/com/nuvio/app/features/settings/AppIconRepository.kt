@@ -20,7 +20,9 @@ internal object AppIconRepository {
         if (hasLoaded) return
         hasLoaded = true
         val savedKey = AppIconPlatform.loadSelectedIconKey()
-        val savedIcon = AppIconOption.entries.firstOrNull { it.key == savedKey }
+        val savedIcon = AppIconOption.entries.firstOrNull {
+            it.key == savedKey && it.isAvailableOnCurrentPlatform
+        }
         val selected = savedIcon ?: AppIconOption.fromPlatformName(AppIconPlatform.currentIconName())
         if (savedIcon == null && selected != AppIconOption.ORIGINAL) {
             AppIconPlatform.saveSelectedIconKey(selected.key)
@@ -30,6 +32,7 @@ internal object AppIconRepository {
 
     suspend fun select(icon: AppIconOption) {
         ensureLoaded()
+        if (!icon.isAvailableOnCurrentPlatform) return
         val current = _state.value
         if (current.pending != null || current.selected == icon) return
 

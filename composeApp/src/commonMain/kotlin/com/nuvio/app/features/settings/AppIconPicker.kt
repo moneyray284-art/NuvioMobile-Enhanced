@@ -210,7 +210,7 @@ private fun AppIconPickerContent(
 
         Spacer(modifier = Modifier.height(18.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            AppIconOption.entries.chunked(columns).forEach { rowIcons ->
+            AppIconOption.entries.filter { it.isAvailableOnCurrentPlatform }.chunked(columns).forEach { rowIcons ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
