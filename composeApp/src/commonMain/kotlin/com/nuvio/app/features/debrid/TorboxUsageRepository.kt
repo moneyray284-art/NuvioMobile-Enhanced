@@ -3,10 +3,10 @@ package com.nuvio.app.features.debrid
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.math.ln
 import kotlin.math.pow
 
@@ -89,7 +89,10 @@ internal object TorboxUsageRepository {
             val daysUntilRenewal = if (user.isSubscribed) {
                 user.premiumExpiresAt
                     ?.let { expiry -> runCatching { Instant.parse(expiry) }.getOrNull() }
-                    ?.let { expiry -> ((expiry - now).inWholeDays).coerceAtLeast(0L) }
+                    ?.let { expiry ->
+                        ((expiry.toEpochMilliseconds() - now.toEpochMilliseconds()) / MILLIS_PER_DAY)
+                            .coerceAtLeast(0L)
+                    }
             } else {
                 null
             }
@@ -129,3 +132,5 @@ internal fun formatTorboxBytes(bytes: Long): String {
     }
     return "$formatted ${units[exponent]}"
 }
+
+private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L

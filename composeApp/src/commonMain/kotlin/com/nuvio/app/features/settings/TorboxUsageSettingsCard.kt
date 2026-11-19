@@ -53,6 +53,7 @@ import nuvio.composeapp.generated.resources.settings_debrid_torbox_no_active_ren
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_plan_tier
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_refresh
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_retry
+import nuvio.composeapp.generated.resources.settings_debrid_torbox_renewal
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_today
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_total
 import nuvio.composeapp.generated.resources.settings_debrid_torbox_upgrade
