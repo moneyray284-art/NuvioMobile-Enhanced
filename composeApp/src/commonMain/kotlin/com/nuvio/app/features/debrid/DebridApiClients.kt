@@ -54,6 +54,24 @@ internal object TorboxApiClient {
     suspend fun validateApiKey(apiKey: String): Boolean =
         getUser(apiKey.trim()).status in 200..299
 
+    suspend fun getUserMe(
+        apiKey: String,
+    ): DebridApiResponse<TorboxEnvelopeDto<TorboxUserMeDto>> =
+        request(
+            method = "GET",
+            url = "$BASE_URL/v1/api/user/me?settings=false",
+            apiKey = apiKey,
+        )
+
+    suspend fun getUserStats(
+        apiKey: String,
+    ): DebridApiResponse<TorboxEnvelopeDto<TorboxUserStatsDto>> =
+        request(
+            method = "GET",
+            url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidthGrouping=day",
+            apiKey = apiKey,
+        )
+
     private suspend fun getUser(apiKey: String): RawHttpResponse =
         httpRequestRaw(
             method = "GET",
