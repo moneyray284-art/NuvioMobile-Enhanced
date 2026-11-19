@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +25,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -54,24 +56,33 @@ import com.nuvio.app.features.debrid.TorboxUsageRepository
 import com.nuvio.app.features.debrid.TorboxUsageUiState
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.settings_torbox_usage_active
+import nuvio.composeapp.generated.resources.settings_torbox_usage_auto_renew
 import nuvio.composeapp.generated.resources.settings_torbox_usage_collapsed_days
 import nuvio.composeapp.generated.resources.settings_torbox_usage_collapsed_free
 import nuvio.composeapp.generated.resources.settings_torbox_usage_cooldown
 import nuvio.composeapp.generated.resources.settings_torbox_usage_days_left
+import nuvio.composeapp.generated.resources.settings_torbox_usage_expired
+import nuvio.composeapp.generated.resources.settings_torbox_usage_free
+import nuvio.composeapp.generated.resources.settings_torbox_usage_linked_account
+import nuvio.composeapp.generated.resources.settings_torbox_usage_load_failed
 import nuvio.composeapp.generated.resources.settings_torbox_usage_monthly
 import nuvio.composeapp.generated.resources.settings_torbox_usage_no_renewal
 import nuvio.composeapp.generated.resources.settings_torbox_usage_plan_tier
 import nuvio.composeapp.generated.resources.settings_torbox_usage_progress
 import nuvio.composeapp.generated.resources.settings_torbox_usage_refresh
 import nuvio.composeapp.generated.resources.settings_torbox_usage_renewal
+import nuvio.composeapp.generated.resources.settings_torbox_usage_retry
 import nuvio.composeapp.generated.resources.settings_torbox_usage_title
 import nuvio.composeapp.generated.resources.settings_torbox_usage_today
+import nuvio.composeapp.generated.resources.settings_torbox_usage_upgrade
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -86,16 +97,24 @@ internal fun TorboxUsageSettingsCard(
     }.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val tokens = MaterialTheme.nuvio
+    val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(apiKey) {
         TorboxUsageRepository.refresh(apiKey)
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            TorboxUsageRepository.refreshUsageWindow()
+        }
     }
 
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
     val verticalPadding = if (isTablet) 16.dp else 14.dp
     val todayLabel = formatTorboxBytes(usageState.todayDownloadedBytes)
-    val isFreeAccount = usageState.plan == null || usageState.plan == TorboxPlan.FREE
-    val summary = if (isFreeAccount) {
+    val isActive = usageState.isActivePlan()
+    val isFreeAccount = !isActive && usageState.plan == TorboxPlan.FREE
+    val summary = if (isFreeAccount || usageState.plan == null) {
         stringResource(Res.string.settings_torbox_usage_collapsed_free, todayLabel)
     } else {
         stringResource(
@@ -132,16 +151,27 @@ internal fun TorboxUsageSettingsCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(
-                onClick = {
-                    scope.launch { TorboxUsageRepository.refresh(apiKey, force = true) }
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Refresh,
-                    contentDescription = stringResource(Res.string.settings_torbox_usage_refresh),
-                    tint = if (usageState.isLoading) tokens.colors.textDisabled else tokens.colors.textSecondary,
-                )
+            if (expanded) {
+                IconButton(
+                    onClick = {
+                        scope.launch { TorboxUsageRepository.refresh(apiKey, force = true) }
+                    },
+                    enabled = !usageState.isLoading,
+                ) {
+                    if (usageState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = tokens.colors.accent,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Refresh,
+                            contentDescription = stringResource(Res.string.settings_torbox_usage_refresh),
+                            tint = tokens.colors.textSecondary,
+                        )
+                    }
+                }
             }
             Icon(
                 imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
@@ -169,12 +199,56 @@ internal fun TorboxUsageSettingsCard(
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    TorboxPlanSummaryRow(state = usageState)
+                    usageState.email?.let { email ->
+                        Text(
+                            text = email,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } ?: Text(
+                        text = stringResource(Res.string.settings_torbox_usage_linked_account),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tokens.colors.textMuted,
+                    )
+                    if (usageState.loadFailed) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.settings_torbox_usage_load_failed),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = tokens.colors.danger,
+                            )
+                            TextButton(
+                                onClick = { scope.launch { TorboxUsageRepository.refresh(apiKey, force = true) } },
+                            ) {
+                                Text(stringResource(Res.string.settings_torbox_usage_retry))
+                            }
+                        }
+                    }
+                    TorboxPlanSummaryRow(
+                        state = usageState,
+                        onUpgradeClick = { runCatching { uriHandler.openUri("https://torbox.app/") } },
+                    )
                     TorboxUsageStatsRow(state = usageState)
                     TorboxUsageProgress(state = usageState)
-                    usageState.cooldownEpochMs?.let { cooldownEpochMs ->
-                        TorboxCooldownBanner(cooldownEpochMs = cooldownEpochMs)
-                    }
+                    usageState.cooldownEpochMs
+                        ?.takeIf { !usageState.isActivePlan() && it > Clock.System.now().toEpochMilliseconds() }
+                        ?.let { cooldownEpochMs ->
+                            Text(
+                                text = stringResource(
+                                    Res.string.settings_torbox_usage_cooldown,
+                                    formatTorboxDateTime(cooldownEpochMs),
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = tokens.colors.textMuted,
+                            )
+                        }
                 }
             }
         }
@@ -182,7 +256,10 @@ internal fun TorboxUsageSettingsCard(
 }
 
 @Composable
-private fun TorboxPlanSummaryRow(state: TorboxUsageUiState) {
+private fun TorboxPlanSummaryRow(
+    state: TorboxUsageUiState,
+    onUpgradeClick: () -> Unit,
+) {
     val tokens = MaterialTheme.nuvio
     val plan = state.plan
     val daysLeft = state.daysLeft
@@ -214,19 +291,18 @@ private fun TorboxPlanSummaryRow(state: TorboxUsageUiState) {
                         color = tokens.colors.textPrimary,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    if (isActive) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .background(tokens.colors.success, CircleShape),
-                        )
-                        Text(
-                            text = stringResource(Res.string.settings_torbox_usage_active),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = tokens.colors.success,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    val statusString = when {
+                        state.isSubscribed -> Res.string.settings_torbox_usage_auto_renew
+                        isActive -> Res.string.settings_torbox_usage_active
+                        plan == TorboxPlan.FREE -> Res.string.settings_torbox_usage_free
+                        else -> Res.string.settings_torbox_usage_expired
                     }
+                    Text(
+                        text = stringResource(statusString),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isActive) tokens.colors.success else tokens.colors.textMuted,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -235,12 +311,25 @@ private fun TorboxPlanSummaryRow(state: TorboxUsageUiState) {
                     style = MaterialTheme.typography.labelSmall,
                     color = tokens.colors.textMuted,
                 )
-                Text(
-                    text = state.expiryEpochMs?.let(::formatTorboxDate)
-                        ?: stringResource(Res.string.settings_torbox_usage_no_renewal),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tokens.colors.textSecondary,
-                )
+                val showNoRenewal = !isActive && !state.isSubscribed && plan == TorboxPlan.FREE &&
+                    (state.expiryEpochMs == null || state.expiryEpochMs <= Clock.System.now().toEpochMilliseconds())
+                if (showNoRenewal) {
+                    Text(
+                        text = stringResource(Res.string.settings_torbox_usage_no_renewal),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tokens.colors.textSecondary,
+                    )
+                    TextButton(onClick = onUpgradeClick) {
+                        Text(stringResource(Res.string.settings_torbox_usage_upgrade))
+                    }
+                } else {
+                    Text(
+                        text = state.expiryEpochMs?.let(::formatTorboxDate)
+                            ?: stringResource(Res.string.settings_torbox_usage_no_renewal),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tokens.colors.textSecondary,
+                    )
+                }
             }
         }
         RoundRenewalTimer(daysLeft = daysLeft)
@@ -356,19 +445,24 @@ private fun TorboxUsageStat(
 private fun TorboxUsageProgress(state: TorboxUsageUiState) {
     val tokens = MaterialTheme.nuvio
     val allowanceBytes = (state.plan ?: TorboxPlan.FREE).monthlyAllowanceBytes
-    val fraction = if (allowanceBytes <= 0L) {
+    val usageRatio = if (allowanceBytes <= 0L) {
         0f
     } else {
         (state.monthlyDownloadedBytes.toDouble() / allowanceBytes.toDouble())
             .toFloat()
-            .coerceIn(0f, 1f)
     }
+    val fraction = usageRatio.coerceIn(0f, 1f)
     val percent = if (allowanceBytes <= 0L) {
         0
     } else {
         ((state.monthlyDownloadedBytes.toDouble() / allowanceBytes.toDouble()) * 100.0)
             .roundToInt()
             .coerceAtLeast(0)
+    }
+    val progressColor = when {
+        usageRatio >= 0.9f -> tokens.colors.danger
+        usageRatio >= 0.75f -> tokens.colors.warning
+        else -> tokens.colors.success
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -390,7 +484,7 @@ private fun TorboxUsageProgress(state: TorboxUsageUiState) {
             Text(
                 text = "$percent%",
                 style = MaterialTheme.typography.bodySmall,
-                color = tokens.colors.accent,
+                color = progressColor,
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -400,30 +494,8 @@ private fun TorboxUsageProgress(state: TorboxUsageUiState) {
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(CircleShape),
-            color = tokens.colors.accent,
+            color = progressColor,
             trackColor = tokens.colors.borderSubtle,
-        )
-    }
-}
-
-@Composable
-private fun TorboxCooldownBanner(cooldownEpochMs: Long) {
-    val tokens = MaterialTheme.nuvio
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(tokens.shapes.compactCard)
-            .background(tokens.colors.warning.copy(alpha = 0.12f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(
-                Res.string.settings_torbox_usage_cooldown,
-                formatTorboxDateTime(cooldownEpochMs),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = tokens.colors.warning,
         )
     }
 }
@@ -469,3 +541,6 @@ private fun formatTorboxDateTime(epochMs: Long): String {
     val date = dateTime.date
     return "${date.dayOfMonth} ${localizedShortMonthName(date.monthNumber)} ${date.year}, $hour:$minute"
 }
+
+private fun TorboxUsageUiState.isActivePlan(): Boolean = isSubscribed ||
+    (plan != null && plan != TorboxPlan.FREE && (daysLeft ?: 0L) > 0L)

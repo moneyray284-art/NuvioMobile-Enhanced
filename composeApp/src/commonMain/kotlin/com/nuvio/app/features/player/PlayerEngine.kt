@@ -127,6 +127,8 @@ expect fun PlatformPlayerSurface(
     discPlaybackEnabled: Boolean = false,
     /** A Live TV channel: an endless stream that gets live-specific buffering and recovery. */
     liveStream: Boolean = false,
+    /** Records network bytes when this stream was resolved through TorBox. */
+    trackTorboxUsage: Boolean = false,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit = { _, _ -> },
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,

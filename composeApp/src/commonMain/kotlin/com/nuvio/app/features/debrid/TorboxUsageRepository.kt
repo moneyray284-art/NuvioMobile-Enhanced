@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -53,6 +56,7 @@ internal enum class TorboxPlan(
 
 internal data class TorboxUsageUiState(
     val isLoading: Boolean = false,
+    val email: String? = null,
     val plan: TorboxPlan? = null,
     val isSubscribed: Boolean = false,
     val expiryEpochMs: Long? = null,
@@ -74,6 +78,7 @@ internal object TorboxUsageRepository {
     private var statsBytes: Map<String, Long> = emptyMap()
 
     private var plan: TorboxPlan? = null
+    private var email: String? = null
     private var isSubscribed = false
     private var expiryEpochMs: Long? = null
     private var cooldownEpochMs: Long? = null
@@ -99,6 +104,7 @@ internal object TorboxUsageRepository {
         dailyBytes = emptyMap()
         statsBytes = emptyMap()
         plan = null
+        email = null
         isSubscribed = false
         expiryEpochMs = null
         cooldownEpochMs = null
@@ -124,8 +130,24 @@ internal object TorboxUsageRepository {
             // Network calls happen outside the state lock so usage recording never waits on them.
             val responses = try {
                 coroutineScope {
-                    val user = async { TorboxApiClient.fetchUser(normalizedApiKey) }
-                    val stats = async { TorboxApiClient.fetchUserStats(normalizedApiKey) }
+                    val user = async {
+                        try {
+                            TorboxApiClient.fetchUser(normalizedApiKey)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                    val stats = async {
+                        try {
+                            TorboxApiClient.fetchUserStats(normalizedApiKey)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
                     user.await() to stats.await()
                 }
             } catch (error: CancellationException) {
@@ -139,9 +161,9 @@ internal object TorboxUsageRepository {
                 var anySuccess = false
                 if (responses != null) {
                     val (userResponse, statsResponse) = responses
-                    val userEnvelope = userResponse.body
+                    val userEnvelope = userResponse?.body
                         ?.takeIf { userResponse.isSuccessful && it.success != false }
-                    val statsEnvelope = statsResponse.body
+                    val statsEnvelope = statsResponse?.body
                         ?.takeIf { statsResponse.isSuccessful && it.success != false }
 
                     userEnvelope?.data?.let { data ->
@@ -173,7 +195,7 @@ internal object TorboxUsageRepository {
             dailyBytes.forEach { (dateKey, value) ->
                 next[dateKey] = maxOf(next[dateKey] ?: 0L, value)
             }
-            val dateKey = utcDateKey(nowMs)
+            val dateKey = localDate(nowMs).toString()
             next[dateKey] = (next[dateKey] ?: 0L).safeAdd(bytes)
             dailyBytes = pruneDailyBytes(next, nowMs)
             hasLoadedLocal = true
@@ -190,6 +212,8 @@ internal object TorboxUsageRepository {
             is JsonArray -> element.firstOrNull() as? JsonObject
             else -> null
         } ?: return
+
+        email = user["email"]?.stringValueOrNull()?.takeIf { it.isNotBlank() }
 
         val planElement = user["plan"]
         val planCode = planElement?.intValueOrNull()
@@ -211,15 +235,37 @@ internal object TorboxUsageRepository {
     }
 
     private fun parseBandwidthBytes(element: JsonElement): Map<String, Long> {
-        val stats = element as? JsonObject ?: return emptyMap()
-        val rows = stats["bandwidth"] as? JsonArray ?: return emptyMap()
         val parsed = mutableMapOf<String, Long>()
-        rows.forEach { row ->
-            val rowObject = row as? JsonObject ?: return@forEach
-            val dateKey = rowObject["date"]?.toUtcDateKey() ?: return@forEach
-            val bytes = rowObject["bytes_downloaded"]?.longValueOrNull() ?: return@forEach
-            parsed[dateKey] = maxOf(parsed[dateKey] ?: 0L, bytes)
+        val root = element as? JsonObject ?: return emptyMap()
+        val buckets = root.firstValue("bandwidth_usage", "bandwidthUsage", "bandwidth", "daily_usage", "usage_by_day")
+            ?: return emptyMap()
+
+        fun collect(value: JsonElement, inheritedDate: String? = null) {
+            when (value) {
+                is JsonArray -> value.forEach { collect(it, inheritedDate) }
+                is JsonObject -> {
+                    val dateKey = value.firstDate("time_group", "timeGroup", "date", "day", "timestamp", "created_at")
+                        ?.toLocalDateKey()
+                        ?: inheritedDate
+                    val bytes = value.bandwidthBytes()
+                    if (dateKey != null && bytes != null) {
+                        parsed[dateKey] = (parsed[dateKey] ?: 0L).safeAdd(bytes)
+                    } else {
+                        value.forEach { (key, child) ->
+                            collect(child, parseLocalDate(key)?.toString() ?: inheritedDate)
+                        }
+                    }
+                }
+                is JsonPrimitive -> {
+                    val bytes = value.longValueOrNull()
+                    if (inheritedDate != null && bytes != null) {
+                        parsed[inheritedDate] = (parsed[inheritedDate] ?: 0L).safeAdd(bytes)
+                    }
+                }
+                else -> Unit
+            }
         }
+        collect(buckets)
         return parsed
     }
 
@@ -238,6 +284,7 @@ internal object TorboxUsageRepository {
 
         _uiState.value = TorboxUsageUiState(
             isLoading = loading,
+            email = email,
             plan = plan,
             isSubscribed = isSubscribed,
             expiryEpochMs = expiryEpochMs,
@@ -249,12 +296,17 @@ internal object TorboxUsageRepository {
         )
     }
 
-    private fun rollingUsageKeys(nowMs: Long): List<String> =
-        (0 until USAGE_WINDOW_DAYS).map { offset -> utcDateKey(nowMs - offset * DAY_MS) }
+    private fun rollingUsageKeys(nowMs: Long): List<String> {
+        val today = localDate(nowMs)
+        return (0 until USAGE_WINDOW_DAYS).map { offset ->
+            today.minus(DatePeriod(days = offset)).toString()
+        }
+    }
 
     private fun pruneDailyBytes(values: Map<String, Long>, nowMs: Long): Map<String, Long> {
-        val oldestKey = utcDateKey(nowMs - USAGE_STORAGE_DAYS * DAY_MS)
-        return values.filterKeys { it >= oldestKey }
+        val today = localDate(nowMs)
+        val oldestKey = today.minus(DatePeriod(days = USAGE_STORAGE_DAYS)).toString()
+        return values.filterKeys { it in oldestKey..today.toString() }
     }
 
     private fun decodeDailyBytes(raw: String?): Map<String, Long> {
@@ -281,19 +333,48 @@ internal object TorboxUsageRepository {
     }
 
     private fun nowMs(): Long = Clock.System.now().toEpochMilliseconds()
+
+    suspend fun refreshUsageWindow() {
+        ensureLoaded()
+        stateMutex.withLock { publish() }
+    }
 }
 
 private val IsoDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
 private val ZoneSuffixRegex = Regex("""([zZ]|[+-]\d{2}:?\d{2})$""")
 
-private fun utcDateKey(epochMs: Long): String =
-    Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.UTC).date.toString()
+private fun localDate(epochMs: Long): LocalDate =
+    Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault()).date
 
-private fun JsonElement.toUtcDateKey(): String? {
-    val raw = stringValueOrNull()?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    if (IsoDateRegex.matches(raw)) return raw
-    val epochMs = parseTimestampMs(raw) ?: return null
-    return utcDateKey(epochMs)
+private fun JsonElement.toLocalDateKey(): String? = stringValueOrNull()?.let(::parseLocalDate)?.toString()
+
+private fun parseLocalDate(raw: String): LocalDate? {
+    val value = raw.trim()
+    if (IsoDateRegex.matches(value)) return runCatching { LocalDate.parse(value) }.getOrNull()
+    val epochMs = parseTimestampMs(value) ?: return null
+    return localDate(epochMs)
+}
+
+private fun JsonObject.firstValue(vararg keys: String): JsonElement? =
+    keys.firstNotNullOfOrNull { this[it] }
+
+private fun JsonObject.firstDate(vararg keys: String): JsonElement? = firstValue(*keys)
+
+private fun JsonObject.bandwidthBytes(): Long? {
+    val components = listOf("cdn", "webdav", "zips")
+        .mapNotNull { this[it].longValueOrNull() } +
+        listOfNotNull(firstValue("uncached_torrents", "uncachedTorrents", "uncached_torrent")?.longValueOrNull())
+    if (components.isNotEmpty()) return components.fold(0L) { total, bytes -> total.safeAdd(bytes) }
+    return firstValue(
+        "total_download",
+        "total_downloaded_bandwidth",
+        "downloaded_bytes",
+        "bytes_downloaded",
+        "total_downloaded_bytes",
+        "total_bytes",
+        "bytes",
+        "download",
+    )?.longValueOrNull()
 }
 
 private fun timestampMs(element: JsonElement?): Long? {
@@ -331,7 +412,7 @@ private fun JsonElement.stringValueOrNull(): String? =
 private fun JsonElement.booleanValueOrNull(): Boolean? =
     (this as? JsonPrimitive)?.content?.trim()?.toBooleanStrictOrNull()
 
-private fun JsonElement.longValueOrNull(): Long? {
+private fun JsonElement?.longValueOrNull(): Long? {
     val raw = (this as? JsonPrimitive)?.content?.trim() ?: return null
     val number = raw.toDoubleOrNull() ?: return null
     if (!number.isFinite() || number < 0.0) return null

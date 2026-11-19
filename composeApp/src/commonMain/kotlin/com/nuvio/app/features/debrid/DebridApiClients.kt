@@ -58,14 +58,14 @@ internal object TorboxApiClient {
     suspend fun fetchUser(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<JsonElement>> =
         request(
             method = "GET",
-            url = "$BASE_URL/v1/api/user/me",
+            url = "$BASE_URL/v1/api/user/me?settings=false",
             apiKey = apiKey,
         )
 
     suspend fun fetchUserStats(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<JsonElement>> =
         request(
             method = "GET",
-            url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidth_grouping=day",
+            url = "$BASE_URL/v1/api/user/stats?general=true&bandwidth=true&bandwidthGrouping=day",
             apiKey = apiKey,
         )
 

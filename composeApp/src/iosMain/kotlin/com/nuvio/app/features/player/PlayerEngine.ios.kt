@@ -32,12 +32,16 @@ import com.nuvio.app.core.ui.trimImageMemoryForPlayback
 import com.nuvio.app.features.autosync.AutoSyncMpvCoordinator
 import com.nuvio.app.features.autosync.AutoSyncMpvEngineController
 import com.nuvio.app.features.autosync.IosAutoSyncMpvPlatform
+import com.nuvio.app.features.debrid.TorboxUsageRepository
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.player_error_mpv_unavailable
@@ -66,6 +70,7 @@ actual fun PlatformPlayerSurface(
     useNativeController: Boolean,
     discPlaybackEnabled: Boolean,
     liveStream: Boolean,
+    trackTorboxUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -97,6 +102,35 @@ actual fun PlatformPlayerSurface(
             latestOnError.value(getString(Res.string.player_error_mpv_unavailable))
         }
         return
+    }
+
+    LaunchedEffect(bridge, sourceUrl, trackTorboxUsage) {
+        if (!trackTorboxUsage) return@LaunchedEffect
+        var pendingBytes = 0L
+        var lastSampleAt = Clock.System.now().toEpochMilliseconds()
+        var lastFlushAt = lastSampleAt
+        try {
+            while (isActive) {
+                delay(1_000L)
+                val now = Clock.System.now().toEpochMilliseconds()
+                val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
+                lastSampleAt = now
+                if (bridge.getIsPlaying() || bridge.getIsLoading()) {
+                    val speed = bridge.networkSpeedBytesPerSecond().coerceAtLeast(0L)
+                    val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
+                    pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
+                }
+                if (!bridge.getIsPlaying() || now - lastFlushAt >= 10_000L) {
+                    TorboxUsageRepository.recordStreamedBytes(pendingBytes)
+                    pendingBytes = 0L
+                    lastFlushAt = now
+                }
+            }
+        } finally {
+            withContext(NonCancellable) {
+                TorboxUsageRepository.recordStreamedBytes(pendingBytes)
+            }
+        }
     }
 
     bridge.setExperimentalSinglePrimaryPictureInPictureEnabled(experimentalSinglePrimaryPictureInPictureEnabled)

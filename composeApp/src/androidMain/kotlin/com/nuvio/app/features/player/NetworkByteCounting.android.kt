@@ -27,3 +27,10 @@ internal fun DataSource.Factory.countingNetworkBytes(counter: AtomicLong): DataS
         base.createDataSource().also { it.addTransferListener(listener) }
     }
 }
+
+internal fun DataSource.Factory.countingTorboxPlaybackBytes(listener: TransferListener): DataSource.Factory {
+    val base = this
+    return DataSource.Factory {
+        base.createDataSource().also { it.addTransferListener(listener) }
+    }
+}

@@ -23,6 +23,9 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +47,7 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.core.ui.LocalFold
 import com.nuvio.app.features.p2p.P2pStreamingState
+import com.nuvio.app.features.debrid.DebridProviders
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
@@ -299,6 +303,49 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
             ),
     ) {
         val playerSurfaceSourceUrl = if (isP2pPlaybackActive) p2pResolvedSourceUrl else activePlaybackSourceUrl
+        val activeStreamIsTorbox = activeStream?.let { stream ->
+            stream.clientResolve?.service.equals(DebridProviders.TORBOX_ID, ignoreCase = true) ||
+                stream.debridCacheStatus?.providerId.equals(DebridProviders.TORBOX_ID, ignoreCase = true) ||
+                stream.addonId.equals(DebridProviders.addonId(DebridProviders.TORBOX_ID), ignoreCase = true)
+        } == true || activeProviderAddonId.equals(
+            DebridProviders.addonId(DebridProviders.TORBOX_ID),
+            ignoreCase = true,
+        )
+        val trackTorboxPlaybackBytes = !isLiveTvPlayback &&
+            activeStreamIsTorbox &&
+            playerSurfaceSourceUrl != null &&
+            playerSurfaceSourceUrl != p2pResolvedSourceUrl &&
+            playerSurfaceSourceUrl.isExternalHttpPlaybackSource()
+        LaunchedEffect(trackTorboxPlaybackBytes, playerController) {
+            if (!trackTorboxPlaybackBytes || playerController?.playbackEngine != AndroidPlaybackEngine.Libmpv) {
+                return@LaunchedEffect
+            }
+            var pendingBytes = 0L
+            var lastSampleAt = Clock.System.now().toEpochMilliseconds()
+            var lastFlushAt = lastSampleAt
+            try {
+                while (true) {
+                    delay(1_000L)
+                    val now = Clock.System.now().toEpochMilliseconds()
+                    val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
+                    lastSampleAt = now
+                    if (playbackSnapshot.isPlaying) {
+                        val speed = playerController?.networkSpeedBytesPerSecond()?.coerceAtLeast(0L) ?: 0L
+                        val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
+                        pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
+                    }
+                    if (!playbackSnapshot.isPlaying || now - lastFlushAt >= 10_000L) {
+                        com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingBytes)
+                        pendingBytes = 0L
+                        lastFlushAt = now
+                    }
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingBytes)
+                }
+            }
+        }
         val playbackKey = activePlaybackKey
         val initialPositionRequestKey = currentInitialPositionRequestKey()
 
@@ -343,6 +390,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
                     animeContent = animeContentState.value,
                     discPlaybackEnabled = !isLiveTvPlayback && !parentMetaType.equals("live", ignoreCase = true),
                     liveStream = isLiveTvPlayback,
+                    trackTorboxUsage = trackTorboxPlaybackBytes,
                     onInitialPositionHandled = { key, handled ->
                         if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
                             initialSeekApplied = handled
@@ -465,6 +513,21 @@ private fun p2pConnectingPhaseLabel(phase: String): String = when (phase) {
     else -> org.jetbrains.compose.resources.stringResource(
         nuvio.composeapp.generated.resources.Res.string.player_torrent_starting_engine,
     )
+}
+
+private fun String.isExternalHttpPlaybackSource(): Boolean {
+    val value = trim().lowercase()
+    if (!value.startsWith("http://") && !value.startsWith("https://")) return false
+    val authority = value.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
+    val host = authority.substringAfterLast('@').let { rawHost ->
+        if (rawHost.startsWith("[")) rawHost.substringAfter('[').substringBefore(']')
+        else rawHost.substringBefore(':')
+    }
+    return host.isNotBlank() &&
+        host != "localhost" &&
+        host != "::1" &&
+        !host.startsWith("127.") &&
+        !host.endsWith(".local")
 }
 
 private val PlayerScreenRuntime.activeAddonLogo: String?

@@ -160,6 +160,7 @@ actual fun PlatformPlayerSurface(
     useNativeController: Boolean,
     discPlaybackEnabled: Boolean,
     liveStream: Boolean,
+    trackTorboxUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -235,6 +236,7 @@ actual fun PlatformPlayerSurface(
             animeContent = animeContent,
             discPlaybackEnabled = discPlaybackEnabled,
             liveStream = liveStream,
+            trackTorboxUsage = trackTorboxUsage,
             onInitialPositionHandled = onInitialPositionHandled,
             onControllerReady = surfaceOnControllerReady,
             onSnapshot = surfaceOnSnapshot,
@@ -303,6 +305,7 @@ private fun ExoPlayerSurface(
     animeContent: Boolean,
     discPlaybackEnabled: Boolean,
     liveStream: Boolean,
+    trackTorboxUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -344,6 +347,7 @@ private fun ExoPlayerSurface(
         sanitizedSourceResponseHeaders,
         normalizedStreamType.orEmpty(),
         useYoutubeChunkedPlayback,
+        trackTorboxUsage,
         initialPositionRequestKey.orEmpty(),
     )
     // Tracks whether an ASS track was actively selected and video effects need activation.
@@ -441,6 +445,12 @@ private fun ExoPlayerSurface(
     }
     val networkBytesRead = remember(playerSourceKey) { AtomicLong(0L) }
     val networkSpeedSampler = remember(playerSourceKey) { ByteRateSampler() }
+    val torboxUsageTracker = remember(playerSourceKey, trackTorboxUsage) {
+        if (trackTorboxUsage) TorboxPlaybackUsageTracker() else null
+    }
+    DisposableEffect(torboxUsageTracker) {
+        onDispose { torboxUsageTracker?.close() }
+    }
     val dataSourceFactory = remember(
         context,
         sourceUrl,
@@ -449,6 +459,7 @@ private fun ExoPlayerSurface(
         useYoutubeChunkedPlayback,
         externalSubtitles,
         liveStream,
+        torboxUsageTracker,
     ) {
         val loopbackSource = isLoopbackPlaybackSource(sourceUrl)
         PlatformPlaybackDataSourceFactory.create(
@@ -479,7 +490,9 @@ private fun ExoPlayerSurface(
                     }
                     .toSet()
             },
-        ).countingNetworkBytes(networkBytesRead)
+        ).countingNetworkBytes(networkBytesRead).let { factory ->
+            torboxUsageTracker?.let { tracker -> factory.countingTorboxPlaybackBytes(tracker) } ?: factory
+        }
     }
     val bluraySession = remember(playerSourceKey, discPlaybackEnabled) {
         val adaptive = normalizedStreamType in setOf("hls", "m3u8", "dash", "mpd", "smoothstreaming", "ss")
@@ -755,6 +768,24 @@ private fun ExoPlayerSurface(
             useCustomSubtitles = false,
         )
         player
+    }
+
+    DisposableEffect(exoPlayer, torboxUsageTracker) {
+        val tracker = torboxUsageTracker
+        if (tracker == null) return@DisposableEffect onDispose {}
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (!isPlaying) tracker.flush()
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                    tracker.flush()
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose { exoPlayer.removeListener(listener) }
     }
 
     val nowPlayingController = remember(context, exoPlayer) {
