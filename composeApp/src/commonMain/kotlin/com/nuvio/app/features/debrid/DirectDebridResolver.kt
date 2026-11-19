@@ -191,6 +191,7 @@ sealed class DirectDebridResolveResult {
         val url: String,
         val filename: String?,
         val videoSize: Long?,
+        val providerId: String? = null,
     ) : DirectDebridResolveResult()
 
     data object MissingApiKey : DirectDebridResolveResult()
@@ -289,6 +290,7 @@ private class LocalDebridAddonStreamResolver(
                 filename = file.displayName().takeIf { it.isNotBlank() }
                     ?: stream.behaviorHints.filename?.takeIf { it.isNotBlank() },
                 videoSize = videoSize,
+                providerId = account.provider.id,
             )
         } catch (error: Exception) {
             if (error is CancellationException) throw error
@@ -377,6 +379,7 @@ private fun StreamItem.withResolvedDebridUrl(result: DirectDebridResolveResult.S
         externalUrl = null,
         behaviorHints = behaviorHints.mergeResolvedDebridHints(result),
         debridResolved = true,
+        debridResolvedProviderId = result.providerId,
     )
 
 private fun StreamBehaviorHints.mergeResolvedDebridHints(result: DirectDebridResolveResult.Success): StreamBehaviorHints =

@@ -128,6 +128,7 @@ private class TorboxDebridProviderApi(
                 url = url,
                 filename = file.displayName().takeIf { it.isNotBlank() },
                 videoSize = file.size,
+                providerId = provider.id,
             )
         } catch (error: Exception) {
             if (error is CancellationException) throw error
@@ -173,7 +174,7 @@ internal class PremiumizeDebridProviderApi(
             ?: buildMagnetUri(resolve)
             ?: stream.playableDirectUrl?.takeIf { it.isNotBlank() }
             ?: return DirectDebridResolveResult.Stale
-        return resolvePremiumizeDirectDownload(
+        return when (val result = resolvePremiumizeDirectDownload(
             apiKey = apiKey,
             source = source,
             resolve = resolve,
@@ -182,7 +183,10 @@ internal class PremiumizeDebridProviderApi(
             fallbackFilename = stream.behaviorHints.filename,
             fallbackSize = stream.behaviorHints.videoSize,
             fileSelector = fileSelector,
-        )
+        )) {
+            is DirectDebridResolveResult.Success -> result.copy(providerId = provider.id)
+            else -> result
+        }
     }
 
     private fun premiumizeClientIdOrThrow(): String =
@@ -250,6 +254,7 @@ private class RealDebridProviderApi(
                     filename = unrestrict.body.filename?.takeIf { it.isNotBlank() }
                         ?: file.displayName().takeIf { it.isNotBlank() },
                     videoSize = unrestrict.body.filesize ?: file.bytes,
+                    providerId = provider.id,
                 )
             } finally {
                 if (!resolved) {

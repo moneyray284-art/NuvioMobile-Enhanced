@@ -37,6 +37,8 @@ data class StreamItem(
     val serverTarget: ServerPlaybackTarget? = null,
     /** True when [url] was produced by Nuvio's own debrid resolver, not returned by the add-on. */
     val debridResolved: Boolean = false,
+    /** Provider that produced [url] when it was resolved by Nuvio. */
+    val debridResolvedProviderId: String? = null,
 ) {
     val streamLabel: String
         get() = name?.takeIf { it.isNotBlank() } ?: "Stream"

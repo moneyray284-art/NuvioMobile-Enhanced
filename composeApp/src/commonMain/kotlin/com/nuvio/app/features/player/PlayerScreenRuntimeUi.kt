@@ -306,6 +306,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
         val activeStreamIsTorbox = activeStream?.let { stream ->
             stream.clientResolve?.service.equals(DebridProviders.TORBOX_ID, ignoreCase = true) ||
                 stream.debridCacheStatus?.providerId.equals(DebridProviders.TORBOX_ID, ignoreCase = true) ||
+                stream.debridResolvedProviderId.equals(DebridProviders.TORBOX_ID, ignoreCase = true) ||
                 stream.addonId.equals(DebridProviders.addonId(DebridProviders.TORBOX_ID), ignoreCase = true)
         } == true || activeProviderAddonId.equals(
             DebridProviders.addonId(DebridProviders.TORBOX_ID),
@@ -319,6 +320,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
         val activeStreamIsPremiumize = activeStream?.let { stream ->
             stream.clientResolve?.service.equals(DebridProviders.PREMIUMIZE_ID, ignoreCase = true) ||
                 stream.debridCacheStatus?.providerId.equals(DebridProviders.PREMIUMIZE_ID, ignoreCase = true) ||
+                stream.debridResolvedProviderId.equals(DebridProviders.PREMIUMIZE_ID, ignoreCase = true) ||
                 stream.addonId.equals(DebridProviders.addonId(DebridProviders.PREMIUMIZE_ID), ignoreCase = true)
         } == true || activeProviderAddonId.equals(
             DebridProviders.addonId(DebridProviders.PREMIUMIZE_ID),
