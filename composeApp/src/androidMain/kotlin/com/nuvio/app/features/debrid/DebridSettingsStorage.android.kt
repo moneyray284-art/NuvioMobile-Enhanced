@@ -75,10 +75,16 @@ actual object DebridSettingsStorage {
     }
 
     actual fun loadProviderApiKey(providerId: String): String? =
-        loadString(providerApiKeyKey(providerId))
+        loadString(providerApiKeyKey(providerId))?.trim()?.takeIf { it.isNotBlank() }
 
     actual fun saveProviderApiKey(providerId: String, apiKey: String) {
-        saveString(providerApiKeyKey(providerId), apiKey)
+        val key = providerApiKeyKey(providerId)
+        val normalized = apiKey.trim()
+        if (normalized.isBlank()) {
+            preferences?.edit()?.remove(ProfileScopedKey.of(key))?.apply()
+        } else {
+            saveString(key, normalized)
+        }
     }
 
     actual fun loadTorboxApiKey(): String? = loadProviderApiKey(DebridProviders.TORBOX_ID)

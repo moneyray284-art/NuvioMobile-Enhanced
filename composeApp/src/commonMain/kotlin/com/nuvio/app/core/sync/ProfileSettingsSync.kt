@@ -309,6 +309,7 @@ object ProfileSettingsSync {
         StreamBadgeSettingsStorage.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         StreamBadgeSettingsRepository.onProfileChanged()
 
+        // Keep device-local debrid credentials authoritative when applying legacy or stale remote blobs.
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(
                 PROFILE_DEBRID_SETTINGS_FEATURE,

@@ -40,6 +40,40 @@ class ProfileSettingsCredentialPolicyTest {
     }
 
     @Test
+    fun `local TorBox and Premiumize keys win over blank or not set remote values`() {
+        val remote = buildJsonObject {
+            put("debrid_torbox_api_key", encodeSyncString(" "))
+            put("debrid_premiumize_api_key", encodeSyncString("Not set"))
+        }
+        val local = buildJsonObject {
+            put("debrid_torbox_api_key", encodeSyncString("local-torbox-key"))
+            put("debrid_premiumize_api_key", encodeSyncString("local-premiumize-key"))
+        }
+
+        val merged = preservingLocalProfileCredentials(PROFILE_DEBRID_SETTINGS_FEATURE, remote, local)
+
+        assertEquals("local-torbox-key", merged.decodeSyncString("debrid_torbox_api_key"))
+        assertEquals("local-premiumize-key", merged.decodeSyncString("debrid_premiumize_api_key"))
+    }
+
+    @Test
+    fun `blank or placeholder remote debrid keys are discarded when local keys are absent`() {
+        val remote = buildJsonObject {
+            put("debrid_torbox_api_key", encodeSyncString(""))
+            put("debrid_premiumize_api_key", encodeSyncString("Not set"))
+        }
+
+        val merged = preservingLocalProfileCredentials(
+            PROFILE_DEBRID_SETTINGS_FEATURE,
+            remote,
+            buildJsonObject { },
+        )
+
+        assertFalse("debrid_torbox_api_key" in merged)
+        assertFalse("debrid_premiumize_api_key" in merged)
+    }
+
+    @Test
     fun `legacy TMDB credentials are discarded from local and remote settings`() {
         val remote = buildJsonObject {
             put("tmdb_enabled", JsonPrimitive(true))

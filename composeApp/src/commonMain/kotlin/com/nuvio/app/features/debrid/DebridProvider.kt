@@ -48,7 +48,7 @@ object DebridProviders {
         id = PREMIUMIZE_ID,
         displayName = "Premiumize",
         shortName = "PM",
-        authMethod = DebridProviderAuthMethod.DeviceCode,
+        authMethod = DebridProviderAuthMethod.ApiKey,
         capabilities = setOf(
             DebridProviderCapability.ClientResolve,
             DebridProviderCapability.LocalTorrentCacheCheck,

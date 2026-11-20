@@ -355,7 +355,14 @@ internal fun LazyListScope.debridSettingsContent(
                     subtitle = stringResource(Res.string.settings_debrid_dialog_subtitle, provider.displayName),
                     placeholder = stringResource(Res.string.settings_debrid_dialog_placeholder, provider.displayName),
                     currentValue = settings.apiKeyFor(provider.id),
-                    onSave = { apiKey -> DebridSettingsRepository.setProviderApiKey(provider.id, apiKey) },
+                    validateBeforeSave = provider.id != DebridProviders.PREMIUMIZE_ID,
+                    onSave = { apiKey ->
+                        if (provider.id == DebridProviders.PREMIUMIZE_ID) {
+                            DebridSettingsRepository.setPremiumizeApiKey(apiKey)
+                        } else {
+                            DebridSettingsRepository.setProviderApiKey(provider.id, apiKey)
+                        }
+                    },
                     onDismiss = { activeApiKeyProviderId = null },
                 )
             }
@@ -1629,7 +1636,8 @@ private fun DebridApiKeyDialog(
     subtitle: String,
     placeholder: String,
     currentValue: String,
-    onSave: (String) -> Unit,
+    validateBeforeSave: Boolean = true,
+    onSave: suspend (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -1642,9 +1650,11 @@ private fun DebridApiKeyDialog(
         scope.launch {
             isValidating = true
             validationMessage = null
-            val valid = normalizedDraft.isNotBlank() && runCatching {
-                DebridCredentialValidator.validateProvider(providerId, normalizedDraft)
-            }.getOrDefault(false)
+            val valid = normalizedDraft.isNotBlank() && (
+                !validateBeforeSave || runCatching {
+                    DebridCredentialValidator.validateProvider(providerId, normalizedDraft)
+                }.getOrDefault(false)
+            )
             if (valid) {
                 onSave(normalizedDraft)
                 isValidating = false
@@ -1697,8 +1707,10 @@ private fun DebridApiKeyDialog(
             DialogButton(
                 text = stringResource(Res.string.action_clear),
                 onClick = {
-                    onSave("")
-                    onDismiss()
+                    scope.launch {
+                        onSave("")
+                        onDismiss()
+                    }
                 },
                 enabled = !isValidating,
             )
@@ -1730,7 +1742,11 @@ private fun providerCredentialStatus(
 ): String =
     when (provider.authMethod) {
         DebridProviderAuthMethod.DeviceCode -> if (credential.isBlank()) notSetLabel else connectedLabel
-        DebridProviderAuthMethod.ApiKey -> maskDebridApiKey(credential, notSetLabel)
+        DebridProviderAuthMethod.ApiKey -> if (provider.id == DebridProviders.PREMIUMIZE_ID) {
+            if (credential.isBlank()) notSetLabel else connectedLabel
+        } else {
+            maskDebridApiKey(credential, notSetLabel)
+        }
     }
 
 @Composable

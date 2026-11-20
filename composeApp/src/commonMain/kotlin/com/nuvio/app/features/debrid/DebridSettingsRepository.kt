@@ -75,7 +75,10 @@ object DebridSettingsRepository {
         ensureLoaded()
         val provider = DebridProviders.byId(providerId) ?: return
         val normalized = value.trim()
-        if (providerApiKeys[provider.id].orEmpty() == normalized) return
+        if (providerApiKeys[provider.id].orEmpty() == normalized) {
+            DebridSettingsStorage.saveProviderApiKey(provider.id, normalized)
+            return
+        }
         providerApiKeys = if (normalized.isBlank()) {
             providerApiKeys - provider.id
         } else {
@@ -95,8 +98,12 @@ object DebridSettingsRepository {
         setProviderApiKey(DebridProviders.REAL_DEBRID_ID, value)
     }
 
-    fun setPremiumizeApiKey(value: String) {
-        setProviderApiKey(DebridProviders.PREMIUMIZE_ID, value)
+    suspend fun setPremiumizeApiKey(value: String) {
+        val normalized = value.trim()
+        setProviderApiKey(DebridProviders.PREMIUMIZE_ID, normalized)
+        if (normalized.isNotBlank()) {
+            PremiumizeUsageRepository.refresh(normalized)
+        }
     }
 
     fun setPreferredResolverProviderId(providerId: String) {
