@@ -51,6 +51,42 @@ import org.jetbrains.compose.resources.stringResource
 
 private const val TAG = "NuvioiOSPlayer"
 
+private data class ProgressByteEstimate(
+    val totalBytes: Long?,
+    val deltaBytes: Long,
+)
+
+private fun estimateProgressBytes(
+    url: String,
+    sourceUrl: String,
+    streamType: String?,
+    positionMs: Long,
+    durationMs: Long,
+    contentLengthBytes: Long?,
+    previousEstimate: Long?,
+): ProgressByteEstimate {
+    val pathExtension = sequenceOf(url, sourceUrl)
+        .map { it.substringBefore('#').substringBefore('?').substringAfterLast('/').substringAfterLast('.').lowercase() }
+        .firstOrNull { it == "mkv" || it == "mp4" }
+    val normalizedType = streamType.orEmpty().lowercase()
+    val directFileType = pathExtension != null || normalizedType.contains("matroska") ||
+        normalizedType.contains("mp4") || normalizedType == "mkv"
+    val totalBytes = contentLengthBytes?.takeIf { it > 0L }
+    if (!directFileType || totalBytes == null || durationMs <= 0L) {
+        return ProgressByteEstimate(totalBytes = null, deltaBytes = 0L)
+    }
+
+    val boundedPosition = positionMs.coerceIn(0L, durationMs)
+    val estimate = (totalBytes.toDouble() * boundedPosition.toDouble() / durationMs.toDouble())
+        .toLong()
+        .coerceIn(0L, totalBytes)
+    val delta = if (previousEstimate == null) 0L else (estimate - previousEstimate).coerceAtLeast(0L)
+    return ProgressByteEstimate(totalBytes = estimate, deltaBytes = delta)
+}
+
+private fun Long.safeAddUsageBytes(delta: Long): Long =
+    if (delta <= 0L) this else if (Long.MAX_VALUE - this < delta) Long.MAX_VALUE else this + delta
+
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun PlatformPlayerSurface(
@@ -73,6 +109,7 @@ actual fun PlatformPlayerSurface(
     liveStream: Boolean,
     trackTorboxUsage: Boolean,
     trackPremiumizeUsage: Boolean,
+    trackResolvedDebridUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -106,60 +143,75 @@ actual fun PlatformPlayerSurface(
         return
     }
 
-    LaunchedEffect(bridge, sourceUrl, trackTorboxUsage) {
-        if (!trackTorboxUsage) return@LaunchedEffect
-        var pendingBytes = 0L
-        var lastSampleAt = Clock.System.now().toEpochMilliseconds()
-        var lastFlushAt = lastSampleAt
-        try {
-            while (isActive) {
-                delay(1_000L)
-                val now = Clock.System.now().toEpochMilliseconds()
-                val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
-                lastSampleAt = now
-                if (bridge.getIsPlaying() || bridge.getIsLoading()) {
-                    val speed = bridge.networkSpeedBytesPerSecond().coerceAtLeast(0L)
-                    val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
-                    pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
-                }
-                if (!bridge.getIsPlaying() || now - lastFlushAt >= 10_000L) {
-                    TorboxUsageRepository.recordStreamedBytes(pendingBytes)
-                    pendingBytes = 0L
-                    lastFlushAt = now
-                }
-            }
-        } finally {
-            withContext(NonCancellable) {
-                TorboxUsageRepository.recordStreamedBytes(pendingBytes)
-            }
+    LaunchedEffect(bridge, sourceUrl, streamType, trackResolvedDebridUsage, trackTorboxUsage, trackPremiumizeUsage) {
+        if (!trackResolvedDebridUsage) return@LaunchedEffect
+        val preferredProviderId = when {
+            trackTorboxUsage -> com.nuvio.app.features.debrid.DebridProviders.TORBOX_ID
+            trackPremiumizeUsage -> com.nuvio.app.features.debrid.DebridProviders.PREMIUMIZE_ID
+            else -> null
         }
-    }
-
-    LaunchedEffect(bridge, sourceUrl, trackPremiumizeUsage) {
-        if (!trackPremiumizeUsage) return@LaunchedEffect
-        var pendingBytes = 0L
+        var pendingTorboxBytes = 0L
+        var pendingPremiumizeBytes = 0L
         var lastSampleAt = Clock.System.now().toEpochMilliseconds()
         var lastFlushAt = lastSampleAt
+        var lastProgressEstimateBytes: Long? = null
         try {
             while (isActive) {
                 delay(1_000L)
                 val now = Clock.System.now().toEpochMilliseconds()
                 val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
                 lastSampleAt = now
-                if (bridge.getIsPlaying() || bridge.getIsLoading()) {
-                    val speed = bridge.networkSpeedBytesPerSecond().coerceAtLeast(0L)
-                    val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
-                    pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
+                val resolvedUrl = sequenceOf(
+                    bridge.getProperty("stream-path"),
+                    bridge.getProperty("stream-open-filename"),
+                    bridge.getProperty("path"),
+                    sourceUrl,
+                ).firstOrNull { it.isNotBlank() }.orEmpty()
+                val provider = com.nuvio.app.features.debrid.resolveDebridUsageProvider(
+                    url = resolvedUrl,
+                    preferredProviderId = preferredProviderId,
+                )
+                if (provider != null && (bridge.getIsPlaying() || bridge.getIsLoading())) {
+                    val speed = bridge.networkSpeedBytesPerSecond()
+                    val sample = if (speed > 0L) {
+                        lastProgressEstimateBytes = null
+                        (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
+                    } else {
+                        estimateProgressBytes(
+                            url = resolvedUrl,
+                            sourceUrl = sourceUrl,
+                            streamType = streamType,
+                            positionMs = bridge.getPositionMs(),
+                            durationMs = bridge.getDurationMs(),
+                            contentLengthBytes = bridge.getProperty("file-size").toLongOrNull()
+                                ?: bridge.getProperty("stream-end").toLongOrNull(),
+                            previousEstimate = lastProgressEstimateBytes,
+                        ).also { estimate -> lastProgressEstimateBytes = estimate.totalBytes }
+                            .deltaBytes
+                    }
+                    when (provider) {
+                        com.nuvio.app.features.debrid.DebridUsageProvider.TORBOX -> {
+                            pendingTorboxBytes = pendingTorboxBytes.safeAddUsageBytes(sample)
+                        }
+                        com.nuvio.app.features.debrid.DebridUsageProvider.PREMIUMIZE -> {
+                            pendingPremiumizeBytes = pendingPremiumizeBytes.safeAddUsageBytes(sample)
+                        }
+                    }
+                } else if (provider == null) {
+                    lastProgressEstimateBytes = null
                 }
                 if (!bridge.getIsPlaying() || now - lastFlushAt >= 10_000L) {
-                    PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
-                    pendingBytes = 0L
+                    TorboxUsageRepository.recordStreamedBytes(pendingTorboxBytes)
+                    PremiumizeUsageRepository.recordStreamedBytes(pendingPremiumizeBytes)
+                    pendingTorboxBytes = 0L
+                    pendingPremiumizeBytes = 0L
                     lastFlushAt = now
                 }
             }
         } finally {
             withContext(NonCancellable) {
-                PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
+                TorboxUsageRepository.recordStreamedBytes(pendingTorboxBytes)
+                PremiumizeUsageRepository.recordStreamedBytes(pendingPremiumizeBytes)
             }
         }
     }

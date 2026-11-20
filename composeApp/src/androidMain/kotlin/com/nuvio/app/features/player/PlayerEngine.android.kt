@@ -162,6 +162,7 @@ actual fun PlatformPlayerSurface(
     liveStream: Boolean,
     trackTorboxUsage: Boolean,
     trackPremiumizeUsage: Boolean,
+    trackResolvedDebridUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -239,6 +240,7 @@ actual fun PlatformPlayerSurface(
             liveStream = liveStream,
             trackTorboxUsage = trackTorboxUsage,
             trackPremiumizeUsage = trackPremiumizeUsage,
+            trackResolvedDebridUsage = trackResolvedDebridUsage,
             onInitialPositionHandled = onInitialPositionHandled,
             onControllerReady = surfaceOnControllerReady,
             onSnapshot = surfaceOnSnapshot,
@@ -309,6 +311,7 @@ private fun ExoPlayerSurface(
     liveStream: Boolean,
     trackTorboxUsage: Boolean,
     trackPremiumizeUsage: Boolean,
+    trackResolvedDebridUsage: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
@@ -449,17 +452,16 @@ private fun ExoPlayerSurface(
     }
     val networkBytesRead = remember(playerSourceKey) { AtomicLong(0L) }
     val networkSpeedSampler = remember(playerSourceKey) { ByteRateSampler() }
-    val torboxUsageTracker = remember(playerSourceKey, trackTorboxUsage) {
-        if (trackTorboxUsage) TorboxPlaybackUsageTracker() else null
+    val preferredProviderId = when {
+        trackTorboxUsage -> com.nuvio.app.features.debrid.DebridProviders.TORBOX_ID
+        trackPremiumizeUsage -> com.nuvio.app.features.debrid.DebridProviders.PREMIUMIZE_ID
+        else -> null
     }
-    DisposableEffect(torboxUsageTracker) {
-        onDispose { torboxUsageTracker?.close() }
+    val debridUsageTracker = remember(playerSourceKey, trackResolvedDebridUsage, preferredProviderId) {
+        if (trackResolvedDebridUsage) DebridPlaybackUsageTracker(preferredProviderId) else null
     }
-    val premiumizeUsageTracker = remember(playerSourceKey, trackPremiumizeUsage) {
-        if (trackPremiumizeUsage) PremiumizePlaybackUsageTracker() else null
-    }
-    DisposableEffect(premiumizeUsageTracker) {
-        onDispose { premiumizeUsageTracker?.close() }
+    DisposableEffect(debridUsageTracker) {
+        onDispose { debridUsageTracker?.close() }
     }
     val dataSourceFactory = remember(
         context,
@@ -469,8 +471,7 @@ private fun ExoPlayerSurface(
         useYoutubeChunkedPlayback,
         externalSubtitles,
         liveStream,
-        torboxUsageTracker,
-        premiumizeUsageTracker,
+        debridUsageTracker,
     ) {
         val loopbackSource = isLoopbackPlaybackSource(sourceUrl)
         PlatformPlaybackDataSourceFactory.create(
@@ -502,9 +503,7 @@ private fun ExoPlayerSurface(
                     .toSet()
             },
         ).countingNetworkBytes(networkBytesRead).let { factory ->
-            torboxUsageTracker?.let { tracker -> factory.countingTorboxPlaybackBytes(tracker) } ?: factory
-        }.let { factory ->
-            premiumizeUsageTracker?.let { tracker -> factory.countingPremiumizePlaybackBytes(tracker) } ?: factory
+            debridUsageTracker?.let { tracker -> factory.countingDebridPlaybackBytes(tracker) } ?: factory
         }
     }
     val bluraySession = remember(playerSourceKey, discPlaybackEnabled) {
@@ -783,26 +782,8 @@ private fun ExoPlayerSurface(
         player
     }
 
-    DisposableEffect(exoPlayer, torboxUsageTracker) {
-        val tracker = torboxUsageTracker
-        if (tracker == null) return@DisposableEffect onDispose {}
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (!isPlaying) tracker.flush()
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-                    tracker.flush()
-                }
-            }
-        }
-        exoPlayer.addListener(listener)
-        onDispose { exoPlayer.removeListener(listener) }
-    }
-
-    DisposableEffect(exoPlayer, premiumizeUsageTracker) {
-        val tracker = premiumizeUsageTracker
+    DisposableEffect(exoPlayer, debridUsageTracker) {
+        val tracker = debridUsageTracker
         if (tracker == null) return@DisposableEffect onDispose {}
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -2905,6 +2886,12 @@ private class NuvioLibmpvView(
             override val playbackEngine = AndroidPlaybackEngine.Libmpv
 
             override fun networkSpeedBytesPerSecond(): Long? = cacheSpeedBytesPerSecond
+            override fun currentPlaybackUrl(): String? =
+                mpv.getPropertyString("stream-path")
+                    ?.takeIf { it.isNotBlank() }
+                    ?: mpv.getPropertyString("stream-open-filename")
+                        ?.takeIf { it.isNotBlank() }
+                    ?: mpv.getPropertyString("path")
 
             private var lastAppliedVolume: Float? = null
             private var lastLoggedAudioTracks: String? = null

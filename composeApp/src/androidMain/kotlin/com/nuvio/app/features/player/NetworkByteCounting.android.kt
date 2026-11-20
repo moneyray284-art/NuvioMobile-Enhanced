@@ -41,3 +41,10 @@ internal fun DataSource.Factory.countingPremiumizePlaybackBytes(listener: Transf
         base.createDataSource().also { it.addTransferListener(listener) }
     }
 }
+
+internal fun DataSource.Factory.countingDebridPlaybackBytes(listener: TransferListener): DataSource.Factory {
+    val base = this
+    return DataSource.Factory {
+        base.createDataSource().also { it.addTransferListener(listener) }
+    }
+}

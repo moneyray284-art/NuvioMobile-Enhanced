@@ -17,6 +17,7 @@ interface PlayerEngineController {
     fun showCastDialog() {}
     fun setPlaybackSpeed(speed: Float)
     fun networkSpeedBytesPerSecond(): Long? = null
+    fun currentPlaybackUrl(): String? = null
     fun currentPlayerVolume(): PlayerAudioLevel = PlayerAudioLevel(
         fraction = 1f,
         isMuted = false,
@@ -131,6 +132,8 @@ expect fun PlatformPlayerSurface(
     trackTorboxUsage: Boolean = false,
     /** Records network bytes when this stream was resolved through Premiumize. */
     trackPremiumizeUsage: Boolean = false,
+    /** Watches direct network streams and assigns usage from the final resolved provider host. */
+    trackResolvedDebridUsage: Boolean = false,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit = { _, _ -> },
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,

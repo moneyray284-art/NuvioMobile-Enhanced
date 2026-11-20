@@ -312,11 +312,6 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
             DebridProviders.addonId(DebridProviders.TORBOX_ID),
             ignoreCase = true,
         )
-        val trackTorboxPlaybackBytes = !isLiveTvPlayback &&
-            activeStreamIsTorbox &&
-            playerSurfaceSourceUrl != null &&
-            playerSurfaceSourceUrl != p2pResolvedSourceUrl &&
-            playerSurfaceSourceUrl.isExternalHttpPlaybackSource()
         val activeStreamIsPremiumize = activeStream?.let { stream ->
             stream.clientResolve?.service.equals(DebridProviders.PREMIUMIZE_ID, ignoreCase = true) ||
                 stream.debridCacheStatus?.providerId.equals(DebridProviders.PREMIUMIZE_ID, ignoreCase = true) ||
@@ -326,16 +321,33 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
             DebridProviders.addonId(DebridProviders.PREMIUMIZE_ID),
             ignoreCase = true,
         )
-        val trackPremiumizePlaybackBytes = !isLiveTvPlayback &&
-            activeStreamIsPremiumize &&
+        val resolvedSourceProvider = com.nuvio.app.features.debrid.debridUsageProviderFromUrl(playerSurfaceSourceUrl)
+        val preferredProviderId = when {
+            resolvedSourceProvider != null -> resolvedSourceProvider.providerId
+            activeStreamIsTorbox -> DebridProviders.TORBOX_ID
+            activeStreamIsPremiumize -> DebridProviders.PREMIUMIZE_ID
+            else -> null
+        }
+        val trackResolvedDebridPlaybackBytes = !isLiveTvPlayback &&
             playerSurfaceSourceUrl != null &&
             playerSurfaceSourceUrl != p2pResolvedSourceUrl &&
             playerSurfaceSourceUrl.isExternalHttpPlaybackSource()
-        LaunchedEffect(trackTorboxPlaybackBytes, playerController) {
-            if (!trackTorboxPlaybackBytes || playerController?.playbackEngine != AndroidPlaybackEngine.Libmpv) {
+        val trackTorboxPlaybackBytes = trackResolvedDebridPlaybackBytes &&
+            preferredProviderId == DebridProviders.TORBOX_ID
+        val trackPremiumizePlaybackBytes = trackResolvedDebridPlaybackBytes &&
+            preferredProviderId == DebridProviders.PREMIUMIZE_ID
+        LaunchedEffect(
+            trackResolvedDebridPlaybackBytes,
+            trackTorboxPlaybackBytes,
+            trackPremiumizePlaybackBytes,
+            playerController,
+            playerSurfaceSourceUrl,
+        ) {
+            if (!trackResolvedDebridPlaybackBytes || playerController?.playbackEngine != AndroidPlaybackEngine.Libmpv) {
                 return@LaunchedEffect
             }
-            var pendingBytes = 0L
+            var pendingTorboxBytes = 0L
+            var pendingPremiumizeBytes = 0L
             var lastSampleAt = Clock.System.now().toEpochMilliseconds()
             var lastFlushAt = lastSampleAt
             try {
@@ -345,49 +357,36 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
                     val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
                     lastSampleAt = now
                     if (playbackSnapshot.isPlaying) {
+                        val resolvedUrl = playerController?.currentPlaybackUrl().orEmpty()
+                            .ifBlank { playerSurfaceSourceUrl.orEmpty() }
+                        val providerId = com.nuvio.app.features.debrid.resolveDebridUsageProvider(
+                            url = resolvedUrl,
+                            preferredProviderId = preferredProviderId,
+                        )
                         val speed = playerController?.networkSpeedBytesPerSecond()?.coerceAtLeast(0L) ?: 0L
                         val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
-                        pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
+                        when (providerId) {
+                            com.nuvio.app.features.debrid.DebridUsageProvider.TORBOX -> {
+                                pendingTorboxBytes = pendingTorboxBytes.safeAddUsageBytes(sample)
+                            }
+                            com.nuvio.app.features.debrid.DebridUsageProvider.PREMIUMIZE -> {
+                                pendingPremiumizeBytes = pendingPremiumizeBytes.safeAddUsageBytes(sample)
+                            }
+                            null -> Unit
+                        }
                     }
                     if (!playbackSnapshot.isPlaying || now - lastFlushAt >= 10_000L) {
-                        com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingBytes)
-                        pendingBytes = 0L
+                        com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingTorboxBytes)
+                        com.nuvio.app.features.debrid.PremiumizeUsageRepository.recordStreamedBytes(pendingPremiumizeBytes)
+                        pendingTorboxBytes = 0L
+                        pendingPremiumizeBytes = 0L
                         lastFlushAt = now
                     }
                 }
             } finally {
                 withContext(NonCancellable) {
-                    com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingBytes)
-                }
-            }
-        }
-        LaunchedEffect(trackPremiumizePlaybackBytes, playerController) {
-            if (!trackPremiumizePlaybackBytes || playerController?.playbackEngine != AndroidPlaybackEngine.Libmpv) {
-                return@LaunchedEffect
-            }
-            var pendingBytes = 0L
-            var lastSampleAt = Clock.System.now().toEpochMilliseconds()
-            var lastFlushAt = lastSampleAt
-            try {
-                while (true) {
-                    delay(1_000L)
-                    val now = Clock.System.now().toEpochMilliseconds()
-                    val elapsedMs = (now - lastSampleAt).coerceAtLeast(0L)
-                    lastSampleAt = now
-                    if (playbackSnapshot.isPlaying) {
-                        val speed = playerController?.networkSpeedBytesPerSecond()?.coerceAtLeast(0L) ?: 0L
-                        val sample = (speed * elapsedMs / 1_000L).coerceAtLeast(0L)
-                        pendingBytes = if (Long.MAX_VALUE - pendingBytes < sample) Long.MAX_VALUE else pendingBytes + sample
-                    }
-                    if (!playbackSnapshot.isPlaying || now - lastFlushAt >= 10_000L) {
-                        com.nuvio.app.features.debrid.PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
-                        pendingBytes = 0L
-                        lastFlushAt = now
-                    }
-                }
-            } finally {
-                withContext(NonCancellable) {
-                    com.nuvio.app.features.debrid.PremiumizeUsageRepository.recordStreamedBytes(pendingBytes)
+                    com.nuvio.app.features.debrid.TorboxUsageRepository.recordStreamedBytes(pendingTorboxBytes)
+                    com.nuvio.app.features.debrid.PremiumizeUsageRepository.recordStreamedBytes(pendingPremiumizeBytes)
                 }
             }
         }
@@ -437,6 +436,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
                     liveStream = isLiveTvPlayback,
                     trackTorboxUsage = trackTorboxPlaybackBytes,
                     trackPremiumizeUsage = trackPremiumizePlaybackBytes,
+                    trackResolvedDebridUsage = trackResolvedDebridPlaybackBytes,
                     onInitialPositionHandled = { key, handled ->
                         if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
                             initialSeekApplied = handled
@@ -1435,4 +1435,7 @@ internal val PlayerScreenRuntime.movieRecommendationCandidates: List<MetaPreview
             .take(MOVIE_RECOMMENDATION_LIMIT)
             .toList()
     }
+
+private fun Long.safeAddUsageBytes(delta: Long): Long =
+    if (delta <= 0L) this else if (Long.MAX_VALUE - this < delta) Long.MAX_VALUE else this + delta
 

@@ -14,6 +14,7 @@ internal data class DebridApiResponse<T>(
     val status: Int,
     val body: T?,
     val rawBody: String,
+    val errorMessage: String? = null,
 ) {
     val isSuccessful: Boolean
         get() = status in 200..299
@@ -23,6 +24,8 @@ internal object DebridApiJson {
     @OptIn(ExperimentalSerializationApi::class)
     val json = Json {
         ignoreUnknownKeys = true
+        coerceInputValues = true
+        isLenient = true
         explicitNulls = false
     }
 }
@@ -58,7 +61,7 @@ internal object TorboxApiClient {
     suspend fun fetchUser(apiKey: String): DebridApiResponse<TorboxEnvelopeDto<JsonElement>> =
         request(
             method = "GET",
-            url = "$BASE_URL/v1/api/user/me?settings=false",
+            url = "$BASE_URL/v1/api/user/me",
             apiKey = apiKey,
         )
 
@@ -254,11 +257,7 @@ internal object TorboxApiClient {
             body = body,
             maxResponseBodyBytes = maxResponseBodyBytes,
         )
-        return DebridApiResponse(
-            status = response.status,
-            body = response.decodeBody<T>(),
-            rawBody = response.body,
-        )
+        return response.toDebridApiResponse(apiKey)
     }
 
     private suspend inline fun <reified T> requestWithoutAuth(
@@ -277,15 +276,11 @@ internal object TorboxApiClient {
             headers = headers,
             body = body,
         )
-        return DebridApiResponse(
-            status = response.status,
-            body = response.decodeBody<T>(),
-            rawBody = response.body,
-        )
+        return response.toDebridApiResponse()
     }
 
     private fun authHeaders(apiKey: String): Map<String, String> =
-        mapOf("Authorization" to "Bearer $apiKey")
+        mapOf("Authorization" to "Bearer ${apiKey.trim()}")
 }
 
 internal object RealDebridApiClient {
@@ -417,12 +412,16 @@ internal object PremiumizeApiClient {
             ),
         )
 
-    suspend fun accountInfo(apiKey: String): DebridApiResponse<PremiumizeAccountInfoDto> =
-        request(
+    suspend fun accountInfo(apiKey: String): DebridApiResponse<PremiumizeAccountInfoDto> {
+        val normalizedApiKey = apiKey.trim()
+        val response = httpRequestRaw(
             method = "GET",
-            url = "$BASE_URL/api/account/info",
-            apiKey = apiKey,
+            url = "$BASE_URL/api/account/info?${queryString("apikey" to normalizedApiKey)}",
+            headers = mapOf("Accept" to "application/json"),
+            body = "",
         )
+        return response.toDebridApiResponse(normalizedApiKey)
+    }
 
     suspend fun listAllItems(apiKey: String): DebridApiResponse<PremiumizeItemListAllDto> =
         request(
@@ -514,11 +513,7 @@ internal object PremiumizeApiClient {
             headers = headers,
             body = body,
         )
-        return DebridApiResponse(
-            status = response.status,
-            body = response.decodeBody<T>(),
-            rawBody = response.body,
-        )
+        return response.toDebridApiResponse()
     }
 
     private suspend inline fun <reified T> request(
@@ -538,11 +533,7 @@ internal object PremiumizeApiClient {
             headers = headers,
             body = body,
         )
-        return DebridApiResponse(
-            status = response.status,
-            body = response.decodeBody<T>(),
-            rawBody = response.body,
-        )
+        return response.toDebridApiResponse(apiKey)
     }
 
     private fun formBody(fields: List<Pair<String, String>>): String =
@@ -600,6 +591,67 @@ private inline fun <reified T> RawHttpResponse.decodeBody(): T? {
         null
     }
 }
+
+private inline fun <reified T> RawHttpResponse.toDebridApiResponse(apiKey: String? = null): DebridApiResponse<T> {
+    val decoded = decodeBody<T>()
+    val message = apiErrorMessage(
+        status = status,
+        rawBody = body,
+        parsedBody = decoded != null,
+        apiKey = apiKey,
+    )
+    return DebridApiResponse(
+        status = status,
+        body = decoded,
+        rawBody = body,
+        errorMessage = message,
+    )
+}
+
+private fun apiErrorMessage(
+    status: Int,
+    rawBody: String,
+    parsedBody: Boolean,
+    apiKey: String?,
+): String? {
+    val serverMessage = runCatching {
+        val root = DebridApiJson.json.parseToJsonElement(rawBody) as? kotlinx.serialization.json.JsonObject
+        listOf("error", "detail", "message")
+            .firstNotNullOfOrNull { key ->
+                (root?.get(key) as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() }
+            }
+    }.getOrNull()
+    val safeServerMessage = serverMessage
+        ?.let { message -> apiKey?.takeIf { it.isNotEmpty() }?.let { message.replace(it, "[redacted]") } ?: message }
+        ?.filter { it >= ' ' && it != '\u007f' }
+        ?.take(180)
+    return when {
+        status !in 200..299 -> safeServerMessage?.let { "HTTP $status: $it" } ?: "HTTP $status"
+        rawBody.isNotBlank() && !parsedBody -> "Unable to parse API response (HTTP $status)."
+        else -> null
+    }
+}
+
+internal fun safeDebridFailureMessage(provider: String, error: Throwable, apiKey: String): String {
+    val detail = error.message
+        ?.replace(apiKey, "[redacted]")
+        ?.replace(Regex("(?i)(apikey|token)=([^&\\s]+)"), "\$1=[redacted]")
+        ?.filter { it >= ' ' && it != '\u007f' }
+        ?.take(160)
+        ?.takeIf { it.isNotBlank() }
+    return detail?.let { "$provider request failed: $it" } ?: "$provider network request failed."
+}
+
+internal fun safeDebridProviderMessage(message: String?, apiKey: String): String? =
+    message
+        ?.replace(apiKey, "[redacted]")
+        ?.replace(Regex("(?i)(apikey|token)=([^&\\s]+)"), "\$1=[redacted]")
+        ?.filter { it >= ' ' && it != '\u007f' }
+        ?.take(180)
+        ?.takeIf { it.isNotBlank() }
 
 private fun multipartFormBody(boundary: String, vararg fields: Pair<String, String>): String =
     buildString {

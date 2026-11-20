@@ -65,6 +65,7 @@ internal data class TorboxUsageUiState(
     val todayDownloadedBytes: Long = 0L,
     val monthlyDownloadedBytes: Long = 0L,
     val loadFailed: Boolean = false,
+    val errorMessage: String? = null,
 )
 
 internal object TorboxUsageRepository {
@@ -84,6 +85,7 @@ internal object TorboxUsageRepository {
     private var expiryEpochMs: Long? = null
     private var cooldownEpochMs: Long? = null
     private var lastRefreshAtMs = 0L
+    private var lastRefreshApiKey: String? = null
     private var remoteLoaded = false
 
     fun ensureLoaded() {
@@ -111,6 +113,7 @@ internal object TorboxUsageRepository {
         expiryEpochMs = null
         cooldownEpochMs = null
         lastRefreshAtMs = 0L
+        lastRefreshApiKey = null
         remoteLoaded = false
         _uiState.value = TorboxUsageUiState()
         ensureLoaded()
@@ -121,69 +124,88 @@ internal object TorboxUsageRepository {
         if (normalizedApiKey.isBlank()) return
         ensureLoaded()
 
-        if (!force && remoteLoaded && nowMs() - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
-
         refreshMutex.withLock {
+            if (lastRefreshApiKey != normalizedApiKey) {
+                stateMutex.withLock {
+                    lastRefreshApiKey = normalizedApiKey
+                    plan = null
+                    email = null
+                    isSubscribed = false
+                    expiryEpochMs = null
+                    cooldownEpochMs = null
+                    statsBytes = emptyMap()
+                    statsLocalBaselineBytes = emptyMap()
+                    lastRefreshAtMs = 0L
+                    remoteLoaded = false
+                    publish(loading = false, failed = false, error = null)
+                }
+            }
+
             val startedAtMs = nowMs()
             if (!force && remoteLoaded && startedAtMs - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
             lastRefreshAtMs = startedAtMs
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, loadFailed = false, errorMessage = null)
             val localBytesAtRequestStart = stateMutex.withLock { dailyBytes.toMap() }
 
             // Network calls happen outside the state lock so usage recording never waits on them.
+            suspend fun <T> safeCall(block: suspend () -> T): Pair<T?, Throwable?> = try {
+                block() to null
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                null to error
+            }
+
+            var requestError: Throwable? = null
             val responses = try {
                 coroutineScope {
-                    val user = async {
-                        try {
-                            TorboxApiClient.fetchUser(normalizedApiKey)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-                    val stats = async {
-                        try {
-                            TorboxApiClient.fetchUserStats(normalizedApiKey)
-                        } catch (cancelled: CancellationException) {
-                            throw cancelled
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
+                    val user = async { safeCall { TorboxApiClient.fetchUser(normalizedApiKey) } }
+                    val stats = async { safeCall { TorboxApiClient.fetchUserStats(normalizedApiKey) } }
                     user.await() to stats.await()
                 }
             } catch (error: CancellationException) {
                 stateMutex.withLock { publish(loading = false) }
                 throw error
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                requestError = error
                 null
             }
 
             stateMutex.withLock {
                 var anySuccess = false
+                var userError: String? = null
+                var statsError: String? = null
                 if (responses != null) {
-                    val (userResponse, statsResponse) = responses
+                    val (userResult, statsResult) = responses
+                    val (userResponse, userException) = userResult
+                    val (statsResponse, statsException) = statsResult
                     val userEnvelope = userResponse?.body
                         ?.takeIf { userResponse.isSuccessful && it.success != false }
                     val statsEnvelope = statsResponse?.body
                         ?.takeIf { statsResponse.isSuccessful && it.success != false }
 
                     userEnvelope?.data?.let { data ->
-                        parseUser(data)
-                        anySuccess = true
+                        if (parseUser(data)) {
+                            anySuccess = true
+                        } else {
+                            userError = "Unable to parse TorBox account response."
+                        }
                     }
                     statsEnvelope?.data?.let { data ->
                         statsBytes = parseBandwidthBytes(data)
                         statsLocalBaselineBytes = localBytesAtRequestStart
                         anySuccess = true
                     }
+                    userError = userError ?: torboxResponseError(userResponse, userException, normalizedApiKey)
+                    statsError = torboxResponseError(statsResponse, statsException, normalizedApiKey)
+                } else {
+                    userError = requestError?.let { safeDebridFailureMessage("TorBox", it, normalizedApiKey) }
+                    statsError = userError
                 }
 
-                if (anySuccess) {
-                    remoteLoaded = true
-                }
-                publish(loading = false, failed = !anySuccess)
+                val error = userError ?: statsError
+                remoteLoaded = anySuccess && error == null
+                publish(loading = false, failed = error != null, error = error)
             }
         }
     }
@@ -210,12 +232,12 @@ internal object TorboxUsageRepository {
         }
     }
 
-    private fun parseUser(element: JsonElement) {
+    private fun parseUser(element: JsonElement): Boolean {
         val user = when (element) {
             is JsonObject -> element
             is JsonArray -> element.firstOrNull() as? JsonObject
             else -> null
-        } ?: return
+        } ?: return false
 
         email = user["email"]?.stringValueOrNull()?.takeIf { it.isNotBlank() }
 
@@ -236,6 +258,7 @@ internal object TorboxUsageRepository {
 
         cooldownEpochMs = timestampMs(user["cooldown_until"])
             ?: timestampMs(user["cooldownUntil"])
+        return true
     }
 
     private fun parseBandwidthBytes(element: JsonElement): Map<String, Long> {
@@ -276,6 +299,7 @@ internal object TorboxUsageRepository {
     private fun publish(
         loading: Boolean = _uiState.value.isLoading,
         failed: Boolean = _uiState.value.loadFailed,
+        error: String? = _uiState.value.errorMessage,
     ) {
         val nowMs = nowMs()
         val keys = rollingUsageKeys(nowMs)
@@ -297,6 +321,7 @@ internal object TorboxUsageRepository {
             todayDownloadedBytes = todayUsage,
             monthlyDownloadedBytes = monthlyUsage,
             loadFailed = failed,
+            errorMessage = error,
         )
     }
 
@@ -354,6 +379,26 @@ internal object TorboxUsageRepository {
 
 private val IsoDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
 private val ZoneSuffixRegex = Regex("""([zZ]|[+-]\d{2}:?\d{2})$""")
+
+private fun torboxResponseError(
+    response: DebridApiResponse<TorboxEnvelopeDto<JsonElement>>?,
+    exception: Throwable?,
+    apiKey: String,
+): String? {
+    if (response == null) {
+        return exception?.let { safeDebridFailureMessage("TorBox", it, apiKey) }
+            ?: "TorBox network request failed."
+    }
+    if (!response.isSuccessful) return response.errorMessage ?: "HTTP ${response.status}"
+    val envelope = response.body ?: return response.errorMessage ?: "Unable to parse TorBox response."
+    if (envelope.success == false) {
+        return safeDebridProviderMessage(envelope.error ?: envelope.detail, apiKey)
+            ?: response.errorMessage
+            ?: "TorBox rejected the request."
+    }
+    if (envelope.data == null) return response.errorMessage ?: "TorBox response did not include account data."
+    return response.errorMessage
+}
 
 private fun localDate(epochMs: Long): LocalDate =
     Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault()).date

@@ -191,6 +191,9 @@ internal data class PremiumizeAccountInfoDto(
     @SerialName("premium_until") val premiumUntil: Long? = null,
     @SerialName("limit_used") val limitUsed: Double? = null,
     @SerialName("booster_points") val boosterPoints: Int? = null,
+    @SerialName("space_used") val spaceUsed: Long? = null,
+    @SerialName("total_downloaded") val totalDownloaded: Long? = null,
+    val plan: String? = null,
 )
 
 @Serializable

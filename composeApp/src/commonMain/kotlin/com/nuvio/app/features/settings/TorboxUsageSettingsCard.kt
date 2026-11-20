@@ -219,7 +219,8 @@ internal fun TorboxUsageSettingsCard(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                text = stringResource(Res.string.settings_torbox_usage_load_failed),
+                                text = usageState.errorMessage
+                                    ?: stringResource(Res.string.settings_torbox_usage_load_failed),
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tokens.colors.danger,

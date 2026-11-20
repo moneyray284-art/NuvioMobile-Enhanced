@@ -41,6 +41,7 @@ internal data class PremiumizeUsageUiState(
     val todayDownloadedBytes: Long = 0L,
     val monthlyDownloadedBytes: Long = 0L,
     val loadFailed: Boolean = false,
+    val errorMessage: String? = null,
 )
 
 internal object PremiumizeUsageRepository {
@@ -118,7 +119,7 @@ internal object PremiumizeUsageRepository {
                     boosterPoints = 0
                     lastRefreshAtMs = 0L
                     remoteLoaded = false
-                    publish(loading = false, failed = false)
+                    publish(loading = false, failed = false, error = null)
                 }
             }
 
@@ -126,15 +127,17 @@ internal object PremiumizeUsageRepository {
             if (!force && remoteLoaded && startedAtMs - lastRefreshAtMs in 0L until MIN_REFRESH_INTERVAL_MS) return
             lastRefreshAtMs = startedAtMs
             stateMutex.withLock {
-                _uiState.value = _uiState.value.copy(isLoading = true, loadFailed = false)
+                _uiState.value = _uiState.value.copy(isLoading = true, loadFailed = false, errorMessage = null)
             }
 
+            var requestError: Throwable? = null
             val response = try {
                 PremiumizeApiClient.accountInfo(normalizedApiKey)
             } catch (cancelled: CancellationException) {
                 stateMutex.withLock { publish(loading = false) }
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                requestError = error
                 null
             }
 
@@ -143,8 +146,20 @@ internal object PremiumizeUsageRepository {
                 val isSuccess = response?.isSuccessful == true &&
                     data?.status?.trim().equals("success", ignoreCase = true)
                 val parsed = isSuccess && data != null && parseAccount(data)
-                if (parsed) remoteLoaded = true
-                publish(loading = false, failed = !parsed)
+                remoteLoaded = parsed
+                val errorMessage = when {
+                    response == null -> requestError?.let {
+                        safeDebridFailureMessage("Premiumize", it, normalizedApiKey)
+                    } ?: "Premiumize network request failed."
+                    !response.isSuccessful -> response.errorMessage ?: "HTTP ${response.status}"
+                    data == null -> response.errorMessage ?: "Unable to parse Premiumize account response."
+                    !isSuccess -> safeDebridProviderMessage(data?.message, normalizedApiKey)
+                        ?: data?.status?.takeIf { it.isNotBlank() }
+                        ?: "Premiumize did not report a successful account response."
+                    !parsed -> "Unable to parse Premiumize account information."
+                    else -> null
+                }
+                publish(loading = false, failed = errorMessage != null, error = errorMessage)
             }
         }
     }
@@ -202,6 +217,7 @@ internal object PremiumizeUsageRepository {
     private fun publish(
         loading: Boolean = _uiState.value.isLoading,
         failed: Boolean = _uiState.value.loadFailed,
+        error: String? = _uiState.value.errorMessage,
     ) {
         val nowMs = nowMs()
         val keys = rollingUsageKeys(nowMs)
@@ -227,6 +243,7 @@ internal object PremiumizeUsageRepository {
             todayDownloadedBytes = localToday,
             monthlyDownloadedBytes = localMonthly,
             loadFailed = failed,
+            errorMessage = error,
         )
     }
 
