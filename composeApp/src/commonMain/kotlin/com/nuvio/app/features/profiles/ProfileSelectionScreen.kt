@@ -2,6 +2,9 @@ package com.nuvio.app.features.profiles
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +15,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -39,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,9 +55,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -65,10 +73,13 @@ import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioToastHost
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.isIos
+import com.nuvio.app.isReducedMotionEnabled
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SupporterBadgeIfPresent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -84,6 +95,7 @@ fun ProfileSelectionScreen(
     interactionEnabled: Boolean = true,
     activeProfileIndex: Int? = null,
     contentVisible: Boolean = true,
+    reloginKey: Any = contentVisible,
     onSignInWithAccount: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -102,6 +114,7 @@ fun ProfileSelectionScreen(
         )
     }
     var greetingIndex by remember { mutableStateOf(Random.nextInt(greetings.size)) }
+    val greetingText = greetings[greetingIndex]
     // Paired with the tapped avatar's on-screen center at the moment of the tap, so once the PIN
     // is verified the caller can still glide the transition emblem out from that exact spot.
     var pendingPinSelection by remember { mutableStateOf<Pair<NuvioProfile, Offset>?>(null) }
@@ -263,28 +276,15 @@ fun ProfileSelectionScreen(
                     .graphicsLayer { alpha = contentFadeAlpha.value },
                 horizontalAlignment = Alignment.CenterHorizontally,
               ) {
-                Text(
-                    text = greetings[greetingIndex],
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 30.sp,
-                        letterSpacing = 0.sp,
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = titleAlpha.value
-                        translationY = titleOffset.value
-                    },
+                CascadingGreetingText(
+                    greetingText = greetingText,
+                    reloginKey = reloginKey,
                 )
 
                 Text(
                     text = stringResource(Res.string.profile_who_is_watching),
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
-                    modifier = Modifier.graphicsLayer {
-                        alpha = titleAlpha.value
-                        translationY = titleOffset.value
-                    },
                 )
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 28.dp else 48.dp))
@@ -450,6 +450,118 @@ fun ProfileSelectionScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CascadingGreetingText(
+    greetingText: String,
+    reloginKey: Any,
+) {
+    val reducedMotion = isReducedMotionEnabled()
+    var revealedCharacterCount by remember(reloginKey, greetingText) {
+        mutableIntStateOf(if (reducedMotion) greetingText.length else 0)
+    }
+    val characterStaggerMs = remember(greetingText) {
+        if (greetingText.length <= 1) {
+            0L
+        } else {
+            // Leave the 360ms character animation enough room to finish inside ~900ms.
+            minOf(38L, 540L / (greetingText.length - 1))
+        }
+    }
+    val words = remember(greetingText) {
+        Regex("\\S+").findAll(greetingText).map { match ->
+            match.value to match.range.first
+        }.toList()
+    }
+    val greetingStyle = MaterialTheme.typography.headlineLarge.copy(
+        fontSize = 30.sp,
+        letterSpacing = 0.sp,
+    )
+
+    // This coroutine has a finite set of delayed updates. Once the last character settles there
+    // is no running transition or frame work left behind on the profile screen.
+    LaunchedEffect(reloginKey, greetingText) {
+        if (reducedMotion) {
+            revealedCharacterCount = greetingText.length
+            return@LaunchedEffect
+        }
+
+        revealedCharacterCount = 0
+        coroutineScope {
+            greetingText.indices.forEach { characterIndex ->
+                launch {
+                    delay(characterIndex * characterStaggerMs)
+                    revealedCharacterCount = maxOf(revealedCharacterCount, characterIndex + 1)
+                }
+            }
+        }
+    }
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        words.forEachIndexed { wordIndex, (word, startIndex) ->
+            // A whole word is one FlowRow item, so a wrap never separates its letters.
+            Row {
+                word.forEachIndexed { indexInWord, character ->
+                    CascadingGreetingCharacter(
+                        character = character,
+                        revealed = reducedMotion || startIndex + indexInWord < revealedCharacterCount,
+                        style = greetingStyle,
+                    )
+                }
+                if (wordIndex < words.lastIndex) {
+                    // Keep each word's space inside the same FlowRow item so it cannot orphan on
+                    // the next visual line.
+                    Text(
+                        text = " ",
+                        style = greetingStyle,
+                        color = Color.Transparent,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CascadingGreetingCharacter(
+    character: Char,
+    revealed: Boolean,
+    style: androidx.compose.ui.text.TextStyle,
+) {
+    val alpha by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "greeting_character_alpha",
+    )
+    val translationYValue by animateFloatAsState(
+        targetValue = if (revealed) 0f else 4f,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "greeting_character_translation_y",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0.92f,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "greeting_character_scale",
+    )
+    Text(
+        text = character.toString(),
+        style = style,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.graphicsLayer {
+            this.alpha = alpha
+            // The initial 4.dp rise is converted by Compose's layer density at draw time.
+            translationY = translationYValue * density
+            scaleX = scale
+            scaleY = scale
+        },
+    )
+}
+
 @Composable
 private fun ProfileAvatarCard(
     profile: NuvioProfile,
@@ -482,7 +594,18 @@ private fun ProfileAvatarCard(
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale = if (isPressed) 0.95f else 1f
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.91f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "profile_avatar_press_scale",
+    )
+    val pulseProgress = remember { Animatable(1f) }
+    val clickScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    var tapPending by remember { mutableStateOf(false) }
 
     // Kept up to date on every layout pass so the tap handler below can hand back exactly where
     // on screen this avatar sits — that's where AppLoadingContent glides its emblem in from.
@@ -500,7 +623,7 @@ private fun ProfileAvatarCard(
             }
             .clip(RoundedCornerShape(20.dp))
             .clickable(
-                enabled = enabled,
+                enabled = enabled && !tapPending,
                 interactionSource = interactionSource,
                 indication = null,
                 onClickLabel = stringResource(
@@ -510,7 +633,28 @@ private fun ProfileAvatarCard(
                         Res.string.profile_select_accessibility
                     },
                 ),
-                onClick = { onClick(avatarCenterInWindow) },
+                onClick = {
+                    tapPending = true
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (isIos) {
+                        // iOS already has a platform profile-feedback helper; use it as the light
+                        // tactile counterpart to Compose's cross-platform tick.
+                        ProfileHoverHapticFeedback.perform()
+                    }
+                    clickScope.launch {
+                        launch {
+                            pulseProgress.snapTo(0f)
+                            pulseProgress.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                            )
+                        }
+                        // Let the press spring release before the selection transition begins.
+                        delay(180)
+                        onClick(avatarCenterInWindow)
+                        tapPending = false
+                    }
+                },
             )
             .semantics {
                 role = Role.Button
@@ -528,6 +672,21 @@ private fun ProfileAvatarCard(
                 },
             contentAlignment = Alignment.Center,
         ) {
+            val pulseAlpha = 0.75f * (1f - pulseProgress.value)
+            val pulseScale = 0.94f + (0.28f * pulseProgress.value)
+            if (pulseAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .graphicsLayer {
+                            alpha = pulseAlpha
+                            scaleX = pulseScale
+                            scaleY = pulseScale
+                        }
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                )
+            }
+
             if (avatarImageUrl != null) {
                 val bgColor = avatarItem?.bgColor?.let { parseHexColor(it) } ?: avatarColor
                 Box(
@@ -550,8 +709,11 @@ private fun ProfileAvatarCard(
                         },
                     )
                     .then(
-                        if (avatarImageUrl == null) Modifier.border(2.dp, avatarColor.copy(alpha = 0.4f), CircleShape)
-                        else Modifier,
+                        when {
+                            isPressed -> Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            avatarImageUrl == null -> Modifier.border(2.dp, avatarColor.copy(alpha = 0.4f), CircleShape)
+                            else -> Modifier
+                        },
                     ),
                 contentAlignment = Alignment.Center,
             ) {
