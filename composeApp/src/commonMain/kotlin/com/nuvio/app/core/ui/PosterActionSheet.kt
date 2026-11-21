@@ -32,7 +32,7 @@ fun NuvioWatchedBadge(
         modifier = modifier
             .size(NuvioTokens.Icon.md)
             .clip(tokens.shapes.avatar)
-            .background(palette.accentBrush()),
+            .background(palette.animatedAccentBrush()),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

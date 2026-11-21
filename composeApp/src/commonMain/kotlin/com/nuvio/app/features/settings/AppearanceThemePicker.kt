@@ -45,7 +45,7 @@ import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.ThemeColors
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.labelRes
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.membership.MemberAccessRepository
@@ -82,7 +82,7 @@ internal fun AppearanceThemeSelector(
                 modifier = Modifier
                     .size(if (isTablet) 36.dp else 32.dp)
                     .clip(CircleShape)
-                    .background(palette.accentBrush()),
+                    .background(palette.animatedAccentBrush()),
             )
             Spacer(Modifier.width(NuvioTokens.Space.s16))
             Text(
@@ -198,7 +198,7 @@ private fun ThemeChip(
                 modifier = Modifier
                     .size(NuvioTokens.Space.s40 + NuvioTokens.Space.s4)
                     .clip(CircleShape)
-                    .background(palette.accentBrush()),
+                    .background(palette.animatedAccentBrush()),
                 contentAlignment = Alignment.Center,
             ) {
                 if (isSelected || theme == AppTheme.CUSTOM) {

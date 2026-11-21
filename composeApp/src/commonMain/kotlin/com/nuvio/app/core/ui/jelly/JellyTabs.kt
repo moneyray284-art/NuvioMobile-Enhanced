@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.FloatingNavigationItem
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
@@ -64,7 +64,7 @@ internal fun JellyTabRow(
     val iconSize = if (compactSize) 24.dp else 28.dp
     val labelHeight = if (compactSize) 14.dp else 16.dp
     val iconModifier = Modifier.size(iconSize)
-        .then(if (active) Modifier.gradientMask(palette.accentBrush()) else Modifier)
+        .then(if (active) Modifier.gradientMask(palette.animatedAccentBrush()) else Modifier)
     val iconTint = if (active) Color.White else color
     Row(
         modifier = modifier.padding(4.dp).clearAndSetSemantics {},

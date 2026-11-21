@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.toColorPalette
 import nuvio.composeapp.generated.resources.Res
@@ -41,18 +41,18 @@ internal fun CustomThemePreview(colors: CustomThemeColors) {
         )
         Box(
             Modifier.fillMaxWidth().height(NuvioTokens.Space.s32)
-                .clip(tokens.shapes.chip).background(palette.accentBrush()),
+                .clip(tokens.shapes.chip).background(palette.animatedAccentBrush()),
         )
         Box(
             modifier = Modifier.fillMaxWidth().clip(tokens.shapes.button)
                 .background(palette.backgroundCard)
-                .border(tokens.borders.medium, palette.accentBrush(), tokens.shapes.button)
+                .border(tokens.borders.medium, palette.animatedAccentBrush(), tokens.shapes.button)
                 .padding(NuvioTokens.Space.s12),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = stringResource(Res.string.custom_theme_preview_accent),
-                style = MaterialTheme.typography.titleMedium.copy(brush = palette.accentBrush()),
+                style = MaterialTheme.typography.titleMedium.copy(brush = palette.animatedAccentBrush()),
             )
         }
     }

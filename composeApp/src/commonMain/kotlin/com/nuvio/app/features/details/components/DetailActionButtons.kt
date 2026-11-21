@@ -52,7 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.rounded.Download
 import com.nuvio.app.core.ui.AppIconResource
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.appIconPainter
@@ -732,7 +732,7 @@ private fun PlayButton(
                     if (playEnabled) {
                         Modifier
                             .clip(playShape)
-                            .background(MaterialTheme.themePalette.accentBrush())
+                            .background(MaterialTheme.themePalette.animatedAccentBrush())
                     } else {
                         Modifier
                     },

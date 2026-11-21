@@ -16,6 +16,9 @@ actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
     private const val customThemeColorsKey = "custom_theme_colors"
     private const val amoledEnabledKey = "amoled_enabled"
+    private const val animatedGradientsEnabledKey = "animated_gradients_enabled"
+    private const val animatedThemeOpacityKey = "animated_theme_opacity"
+    private const val glassUiModeKey = "global_glass_ui_mode"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
@@ -39,6 +42,9 @@ actual object ThemeSettingsStorage {
         selectedThemeKey,
         customThemeColorsKey,
         amoledEnabledKey,
+        animatedGradientsEnabledKey,
+        animatedThemeOpacityKey,
+        glassUiModeKey,
         navBarGlowEnabledKey,
         liquidGlassNativeTabBarEnabledKey,
         navBarStyleKey,
@@ -71,6 +77,32 @@ actual object ThemeSettingsStorage {
 
     actual fun saveAmoledEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(amoledEnabledKey))
+    }
+
+    actual fun loadAnimatedGradientsEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(animatedGradientsEnabledKey)
+        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
+    }
+
+    actual fun saveAnimatedGradientsEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(animatedGradientsEnabledKey))
+    }
+
+    actual fun loadAnimatedThemeOpacity(): Float? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(animatedThemeOpacityKey)
+        return if (defaults.objectForKey(key) != null) defaults.doubleForKey(key).toFloat() else null
+    }
+
+    actual fun saveAnimatedThemeOpacity(opacity: Float) {
+        NSUserDefaults.standardUserDefaults.setDouble(opacity.toDouble(), forKey = ProfileScopedKey.of(animatedThemeOpacityKey))
+    }
+
+    actual fun loadGlassUiMode(): String? = loadRawString(glassUiModeKey)
+
+    actual fun saveGlassUiMode(mode: String) {
+        saveRawString(glassUiModeKey, mode)
     }
 
     actual fun loadNavBarGlowEnabled(): Boolean? {
@@ -272,6 +304,9 @@ actual object ThemeSettingsStorage {
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
         loadNavBarGlowEnabled()?.let { put(navBarGlowEnabledKey, encodeSyncBoolean(it)) }
         loadAmoledEnabled()?.let { put(amoledEnabledKey, encodeSyncBoolean(it)) }
+        loadAnimatedGradientsEnabled()?.let { put(animatedGradientsEnabledKey, encodeSyncBoolean(it)) }
+        loadAnimatedThemeOpacity()?.let { put(animatedThemeOpacityKey, encodeSyncString(it.toString())) }
+        loadGlassUiMode()?.let { put(glassUiModeKey, encodeSyncString(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadRawString(navBarStyleKey)?.let { put(navBarStyleKey, encodeSyncString(it)) }
         loadRawString(navBarPositionKey)?.let { put(navBarPositionKey, encodeSyncString(it)) }
@@ -286,6 +321,9 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncString(customThemeColorsKey)?.let(::saveCustomThemeColors)
         payload.decodeSyncBoolean(navBarGlowEnabledKey)?.let(::saveNavBarGlowEnabled)
         payload.decodeSyncBoolean(amoledEnabledKey)?.let(::saveAmoledEnabled)
+        payload.decodeSyncBoolean(animatedGradientsEnabledKey)?.let(::saveAnimatedGradientsEnabled)
+        payload.decodeSyncString(animatedThemeOpacityKey)?.toFloatOrNull()?.let(::saveAnimatedThemeOpacity)
+        payload.decodeSyncString(glassUiModeKey)?.let(::saveGlassUiMode)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let { saveRawString(navBarStyleKey, it) }
         payload.decodeSyncString(navBarPositionKey)?.let { saveRawString(navBarPositionKey, it) }

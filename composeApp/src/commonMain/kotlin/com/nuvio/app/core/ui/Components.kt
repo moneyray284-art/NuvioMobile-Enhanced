@@ -119,7 +119,7 @@ fun NuvioScreen(
     NativeTabBarScrollEffect(listState = listState, enabled = autoHidesNativeTabBar)
     val tokens = MaterialTheme.nuvio
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val screenBackground = if (LocalDynamicArtworkBackgroundActive.current) {
+    val screenBackground = if (LocalDynamicArtworkBackgroundActive.current || LocalSharedGradientState.current.enabled) {
         Color.Transparent
     } else {
         tokens.colors.background
@@ -167,7 +167,7 @@ fun NuvioSurfaceCard(
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
-        modifier = modifier.fillMaxWidth().appGlassBackdrop(tokens.shapes.card),
+        modifier = modifier.fillMaxWidth().appGlassBackdrop(tokens.shapes.card).globalGlassSurface(tokens.shapes.card),
         color = tokens.colors.surface,
         shape = tokens.shapes.card,
         tonalElevation = tonalElevation.dp,
@@ -378,9 +378,9 @@ fun NuvioPrimaryButton(
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
     val containerBrush = if (enabled) {
-        palette.accentBrush()
+        palette.animatedAccentBrush()
     } else {
-        palette.accentBrush(alpha = tokens.opacity.disabled)
+        palette.animatedAccentBrush(alpha = tokens.opacity.disabled)
     }
     Button(
         onClick = onClick,
@@ -388,7 +388,8 @@ fun NuvioPrimaryButton(
             .fillMaxWidth()
             .height(NuvioTokens.Space.s48 + NuvioTokens.Space.s4)
             .clip(tokens.shapes.button)
-            .background(containerBrush),
+            .background(containerBrush)
+            .globalGlassSurface(tokens.shapes.button),
         enabled = enabled,
         shape = tokens.shapes.button,
         colors = ButtonDefaults.buttonColors(

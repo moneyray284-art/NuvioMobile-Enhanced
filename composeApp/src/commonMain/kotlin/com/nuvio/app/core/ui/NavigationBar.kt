@@ -158,6 +158,7 @@ fun NuvioNavigationBar(
                 blurRadius = 24.dp,
                 refractionHeight = 24.dp,
             )
+            .globalGlassSurface(RoundedCornerShape(NuvioTokens.Radius.full))
 
         Box(modifier = pillModifier) {
             Row(
@@ -259,7 +260,7 @@ private class NuvioNavigationBarScopeImpl(
                 Icon(
                     modifier = Modifier
                         .size(iconSize)
-                        .then(if (selected) Modifier.gradientMask(palette.accentBrush()) else Modifier),
+                        .then(if (selected) Modifier.gradientMask(palette.animatedAccentBrush()) else Modifier),
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = if (selected) Color.White else iconColor,
@@ -308,7 +309,7 @@ private class NuvioNavigationBarScopeImpl(
                 Icon(
                     modifier = Modifier
                         .size(iconSize)
-                        .then(if (selected) Modifier.gradientMask(palette.accentBrush()) else Modifier),
+                        .then(if (selected) Modifier.gradientMask(palette.animatedAccentBrush()) else Modifier),
                     painter = painterResource(icon),
                     contentDescription = contentDescription,
                     tint = if (selected) Color.White else iconColor,
@@ -454,7 +455,7 @@ private class NuvioClassicNavigationBarScopeImpl(
                     )
                     .padding(NuvioTokens.Space.s10)
                     .size(tokens.components.navIconSize)
-                    .then(if (selected) Modifier.gradientMask(palette.accentBrush()) else Modifier),
+                    .then(if (selected) Modifier.gradientMask(palette.animatedAccentBrush()) else Modifier),
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = if (selected) Color.White else iconColor,
@@ -492,7 +493,7 @@ private class NuvioClassicNavigationBarScopeImpl(
                     )
                     .padding(NuvioTokens.Space.s10)
                     .size(tokens.components.navIconSize)
-                    .then(if (selected) Modifier.gradientMask(palette.accentBrush()) else Modifier),
+                    .then(if (selected) Modifier.gradientMask(palette.animatedAccentBrush()) else Modifier),
                 painter = painterResource(icon),
                 contentDescription = contentDescription,
                 tint = if (selected) Color.White else iconColor,

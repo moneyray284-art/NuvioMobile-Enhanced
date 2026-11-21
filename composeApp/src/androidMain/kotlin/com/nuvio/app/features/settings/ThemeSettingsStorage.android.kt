@@ -18,6 +18,9 @@ actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
     private const val customThemeColorsKey = "custom_theme_colors"
     private const val amoledEnabledKey = "amoled_enabled"
+    private const val animatedGradientsEnabledKey = "animated_gradients_enabled"
+    private const val animatedThemeOpacityKey = "animated_theme_opacity"
+    private const val glassUiModeKey = "global_glass_ui_mode"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
@@ -39,6 +42,9 @@ actual object ThemeSettingsStorage {
         selectedThemeKey,
         customThemeColorsKey,
         amoledEnabledKey,
+        animatedGradientsEnabledKey,
+        animatedThemeOpacityKey,
+        glassUiModeKey,
         navBarGlowEnabledKey,
         liquidGlassNativeTabBarEnabledKey,
         NAV_BAR_STYLE_KEY,
@@ -83,6 +89,32 @@ actual object ThemeSettingsStorage {
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(amoledEnabledKey), enabled)
             ?.apply()
+    }
+
+    actual fun loadAnimatedGradientsEnabled(): Boolean? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(animatedGradientsEnabledKey)
+            if (prefs.contains(key)) prefs.getBoolean(key, true) else null
+        }
+
+    actual fun saveAnimatedGradientsEnabled(enabled: Boolean) {
+        preferences?.edit()?.putBoolean(ProfileScopedKey.of(animatedGradientsEnabledKey), enabled)?.apply()
+    }
+
+    actual fun loadAnimatedThemeOpacity(): Float? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(animatedThemeOpacityKey)
+            if (prefs.contains(key)) prefs.getFloat(key, 0.85f) else null
+        }
+
+    actual fun saveAnimatedThemeOpacity(opacity: Float) {
+        preferences?.edit()?.putFloat(ProfileScopedKey.of(animatedThemeOpacityKey), opacity)?.apply()
+    }
+
+    actual fun loadGlassUiMode(): String? = loadRawString(glassUiModeKey)
+
+    actual fun saveGlassUiMode(mode: String) {
+        saveRawString(glassUiModeKey, mode)
     }
 
     actual fun loadNavBarGlowEnabled(): Boolean? =
@@ -256,6 +288,9 @@ actual object ThemeSettingsStorage {
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
         loadNavBarGlowEnabled()?.let { put(navBarGlowEnabledKey, encodeSyncBoolean(it)) }
         loadAmoledEnabled()?.let { put(amoledEnabledKey, encodeSyncBoolean(it)) }
+        loadAnimatedGradientsEnabled()?.let { put(animatedGradientsEnabledKey, encodeSyncBoolean(it)) }
+        loadAnimatedThemeOpacity()?.let { put(animatedThemeOpacityKey, encodeSyncString(it.toString())) }
+        loadGlassUiMode()?.let { put(glassUiModeKey, encodeSyncString(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadRawString(NAV_BAR_STYLE_KEY)?.let { put(NAV_BAR_STYLE_KEY, encodeSyncString(it)) }
         loadRawString(NAV_BAR_POSITION_KEY)?.let { put(NAV_BAR_POSITION_KEY, encodeSyncString(it)) }
@@ -270,6 +305,9 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncString(customThemeColorsKey)?.let(::saveCustomThemeColors)
         payload.decodeSyncBoolean(navBarGlowEnabledKey)?.let(::saveNavBarGlowEnabled)
         payload.decodeSyncBoolean(amoledEnabledKey)?.let(::saveAmoledEnabled)
+        payload.decodeSyncBoolean(animatedGradientsEnabledKey)?.let(::saveAnimatedGradientsEnabled)
+        payload.decodeSyncString(animatedThemeOpacityKey)?.toFloatOrNull()?.let(::saveAnimatedThemeOpacity)
+        payload.decodeSyncString(glassUiModeKey)?.let(::saveGlassUiMode)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(NAV_BAR_STYLE_KEY)?.let { saveRawString(NAV_BAR_STYLE_KEY, it) }
         payload.decodeSyncString(NAV_BAR_POSITION_KEY)?.let { saveRawString(NAV_BAR_POSITION_KEY, it) }

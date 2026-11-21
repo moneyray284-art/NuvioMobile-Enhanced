@@ -740,6 +740,10 @@
     <string name="settings_account_status_signed_in">Signed in</string>
     <string name="settings_appearance_amoled_black">AMOLED Black</string>
     <string name="settings_appearance_amoled_description">Use pure black backgrounds for OLED screens.</string>
+    <string name="settings_appearance_animated_gradient">Animated Gradient</string>
+    <string name="settings_appearance_animated_gradient_description">Synchronize animated theme colors across the app.</string>
+    <string name="settings_appearance_animated_theme_opacity">Animated Theme Opacity</string>
+    <string name="settings_appearance_animated_theme_opacity_description">Controls how strongly animated themes show over the dark base.</string>
     <string name="settings_appearance_dynamic_artwork_background">Dynamic background color</string>
     <string name="settings_appearance_catalog_accent">Catalog accent underline</string>
     <string name="settings_appearance_catalog_accent_description">Show a small accent-colored bar under each catalog title on the home screen, matching your theme.</string>
@@ -1804,6 +1808,9 @@
     <string name="theme_cyber_mint">Cyber Mint</string>
     <string name="theme_amethyst">Cosmic Amethyst</string>
     <string name="theme_solar_flare">Solar Flare</string>
+    <string name="theme_aurora_veil">Aurora Veil</string>
+    <string name="theme_velvet_eclipse">Velvet Eclipse</string>
+    <string name="theme_midnight_tide">Midnight Tide</string>
     <string name="theme_custom">Custom</string>
     <string name="custom_theme_title">Your custom gradient</string>
     <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>
@@ -3222,6 +3229,10 @@
     <string name="settings_app_background_error">Couldn\'t load that image.</string>
     <string name="settings_glass_ui">Glass UI (Experimental)</string>
     <string name="settings_glass_ui_description">Turns cards, sheets and dialogs into frosted glass over the app background.</string>
+    <string name="settings_glass_ui_mode">Glass UI mode</string>
+    <string name="settings_glass_ui_mode_off">Off</string>
+    <string name="settings_glass_ui_mode_glow">Glass Glow</string>
+    <string name="settings_glass_ui_mode_liquid">Liquid Glass</string>
     <string name="settings_glass_ui_style">Glass style</string>
     <string name="settings_glass_ui_style_dark">Dark</string>
     <string name="settings_glass_ui_style_balanced">Balanced</string>

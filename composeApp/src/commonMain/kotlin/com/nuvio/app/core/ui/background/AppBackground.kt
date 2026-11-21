@@ -54,9 +54,11 @@ import coil3.compose.asPainter
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.nuvio.app.core.ui.LocalNuvioThemeTokens
+import com.nuvio.app.core.ui.LocalSharedGradientState
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioThemeTokens
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.animatedThemeBackdrop
 import com.nuvio.app.features.details.components.loadedBackdropImageBitmap
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -113,9 +115,10 @@ internal fun AppBackgroundHost(content: @Composable () -> Unit) {
         AppBackgroundRepository.ensureLoaded()
         AppBackgroundRepository.config
     }.collectAsStateWithLifecycle()
+    val animatedThemeEnabled = LocalSharedGradientState.current.enabled
     val suspendCount by AppBackgroundRepository.suspended.collectAsStateWithLifecycle()
-    val model = remember(config.glassEnabled, config.source, config.url, config.localFile) {
-        if (config.glassEnabled) config.imageModel() else null
+    val model = remember(config.glassEnabled, config.source, config.url, config.localFile, animatedThemeEnabled) {
+        if (config.glassEnabled && !animatedThemeEnabled) config.imageModel() else null
     }
     val glassStyle = if (config.glassEnabled) config.glassPreset.style() else null
     val glassUiActive = config.glassEnabled && model != null
@@ -155,6 +158,7 @@ internal fun AppBackgroundHost(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .animatedThemeBackdrop()
             .onGloballyPositioned {
                 geometry.origin = it.positionOnScreen()
                 geometry.size = it.size
@@ -311,8 +315,9 @@ internal fun Modifier.appGlassBackdrop(shape: Shape): Modifier {
 
 @Composable
 fun Modifier.appBackgroundCover(fallback: Color, coverAbove: Boolean = true): Modifier {
+    val resolvedFallback = if (LocalSharedGradientState.current.enabled) Color.Transparent else fallback
     val glass = LocalAppGlass.current?.takeIf { it.blurred != null }
-        ?: return this.background(fallback)
+        ?: return this.background(resolvedFallback)
     val origin = remember { mutableStateOf(Offset.Unspecified) }
     return this
         .onGloballyPositioned { origin.value = it.positionOnScreen() }

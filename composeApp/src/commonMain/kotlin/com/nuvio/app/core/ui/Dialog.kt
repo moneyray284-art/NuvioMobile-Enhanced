@@ -59,7 +59,8 @@ fun DialogSurface(
             modifier = modifier
                 .fillMaxWidth()
                 .widthIn(max = tokens.components.dialogMaxWidth)
-                .appGlassBackdrop(tokens.shapes.dialog),
+                .appGlassBackdrop(tokens.shapes.dialog)
+                .globalGlassSurface(tokens.shapes.dialog),
             shape = tokens.shapes.dialog,
             color = tokens.colors.surfaceDialog,
             contentColor = tokens.colors.textPrimary,

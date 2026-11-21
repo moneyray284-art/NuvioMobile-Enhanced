@@ -37,7 +37,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.app.core.ui.themePalette
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.features.membership.ProfileBackgroundCatalogItem
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.profile_background_custom
@@ -153,7 +153,7 @@ private fun ProfileBackgroundItem(
                         .width(24.dp)
                         .height(24.dp)
                         .clip(CircleShape)
-                        .background(palette.accentBrush()),
+                        .background(palette.animatedAccentBrush()),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

@@ -18,6 +18,9 @@ import nuvio.composeapp.generated.resources.theme_sunset
 import nuvio.composeapp.generated.resources.theme_cyber_mint
 import nuvio.composeapp.generated.resources.theme_amethyst
 import nuvio.composeapp.generated.resources.theme_solar_flare
+import nuvio.composeapp.generated.resources.theme_aurora_veil
+import nuvio.composeapp.generated.resources.theme_velvet_eclipse
+import nuvio.composeapp.generated.resources.theme_midnight_tide
 import org.jetbrains.compose.resources.StringResource
 
 enum class AppTheme {
@@ -27,18 +30,39 @@ enum class AppTheme {
     ARCTIC_BLUE,
     GRAPHITE,
     CUSTOM,
+    WHITE,
     CRIMSON,
     OCEAN,
     VIOLET,
     EMERALD,
     AMBER,
     ROSE,
-    WHITE,
     SUNSET,
     CYBER_MINT,
     AMETHYST,
     SOLAR_FLARE,
+    AURORA_VEIL,
+    VELVET_ECLIPSE,
+    MIDNIGHT_TIDE,
 }
+
+/** A global presentation treatment for surfaces layered over the selected app theme. */
+enum class AppGlassUiMode {
+    OFF,
+    GLASS_GLOW,
+    LIQUID_GLASS,
+}
+
+val AppTheme.isAnimatedGradientTheme: Boolean
+    get() = this in setOf(
+        AppTheme.SUNSET,
+        AppTheme.CYBER_MINT,
+        AppTheme.AMETHYST,
+        AppTheme.SOLAR_FLARE,
+        AppTheme.AURORA_VEIL,
+        AppTheme.VELVET_ECLIPSE,
+        AppTheme.MIDNIGHT_TIDE,
+    )
 
 val AppTheme.labelRes: StringResource
     get() = when (this) {
@@ -59,4 +83,7 @@ val AppTheme.labelRes: StringResource
         AppTheme.CYBER_MINT -> Res.string.theme_cyber_mint
         AppTheme.AMETHYST -> Res.string.theme_amethyst
         AppTheme.SOLAR_FLARE -> Res.string.theme_solar_flare
+        AppTheme.AURORA_VEIL -> Res.string.theme_aurora_veil
+        AppTheme.VELVET_ECLIPSE -> Res.string.theme_velvet_eclipse
+        AppTheme.MIDNIGHT_TIDE -> Res.string.theme_midnight_tide
     }

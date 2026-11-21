@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtonStyle
+import com.nuvio.app.core.ui.AppGlassUiMode
 import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
@@ -49,6 +50,10 @@ import nuvio.composeapp.generated.resources.settings_app_background_use_url
 import nuvio.composeapp.generated.resources.settings_glass_ui_section
 import nuvio.composeapp.generated.resources.settings_glass_ui
 import nuvio.composeapp.generated.resources.settings_glass_ui_description
+import nuvio.composeapp.generated.resources.settings_glass_ui_mode
+import nuvio.composeapp.generated.resources.settings_glass_ui_mode_off
+import nuvio.composeapp.generated.resources.settings_glass_ui_mode_glow
+import nuvio.composeapp.generated.resources.settings_glass_ui_mode_liquid
 import nuvio.composeapp.generated.resources.settings_glass_ui_style
 import nuvio.composeapp.generated.resources.settings_glass_ui_style_balanced
 import nuvio.composeapp.generated.resources.settings_glass_ui_style_dark
@@ -61,6 +66,13 @@ private val GlassUiPreset.labelRes: StringResource
         GlassUiPreset.DARK -> Res.string.settings_glass_ui_style_dark
         GlassUiPreset.BALANCED -> Res.string.settings_glass_ui_style_balanced
         GlassUiPreset.VIVID -> Res.string.settings_glass_ui_style_vivid
+    }
+
+private val AppGlassUiMode.labelRes: StringResource
+    get() = when (this) {
+        AppGlassUiMode.OFF -> Res.string.settings_glass_ui_mode_off
+        AppGlassUiMode.GLASS_GLOW -> Res.string.settings_glass_ui_mode_glow
+        AppGlassUiMode.LIQUID_GLASS -> Res.string.settings_glass_ui_mode_liquid
     }
 
 private val AppBackgroundSource.labelRes: StringResource
@@ -79,7 +91,9 @@ internal fun LazyListScope.appBackgroundSettingsItem(isTablet: Boolean) {
         var showSourceSheet by remember { mutableStateOf(false) }
         var showUrlDialog by remember { mutableStateOf(false) }
         var showStyleSheet by remember { mutableStateOf(false) }
+        var showModeSheet by remember { mutableStateOf(false) }
         var showError by remember { mutableStateOf(false) }
+        val globalGlassMode by ThemeSettingsRepository.glassUiMode.collectAsStateWithLifecycle()
         val pickImage = rememberAppBackgroundImagePicker(
             onPicked = AppBackgroundRepository::setLocalImage,
             onError = { showError = true },
@@ -90,6 +104,13 @@ internal fun LazyListScope.appBackgroundSettingsItem(isTablet: Boolean) {
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_glass_ui_mode),
+                    description = stringResource(globalGlassMode.labelRes),
+                    isTablet = isTablet,
+                    onClick = { showModeSheet = true },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_glass_ui),
                     description = stringResource(Res.string.settings_glass_ui_description),
@@ -114,6 +135,17 @@ internal fun LazyListScope.appBackgroundSettingsItem(isTablet: Boolean) {
                     )
                 }
             }
+        }
+
+        if (showModeSheet) {
+            ChoiceSheet(
+                options = AppGlassUiMode.entries.map { mode ->
+                    SheetChoice(stringResource(mode.labelRes), mode == globalGlassMode) {
+                        ThemeSettingsRepository.setGlassUiMode(mode)
+                    }
+                },
+                onDismiss = { showModeSheet = false },
+            )
         }
 
         if (showSourceSheet) {

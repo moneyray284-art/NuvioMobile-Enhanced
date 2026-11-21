@@ -99,7 +99,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.themePalette
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvioTypeScale
@@ -1377,7 +1377,7 @@ private fun PlayerProgressTrack(
         PlayerBufferedTrack(bufferedFraction = bufferedFraction)
         SliderDefaults.Track(
             sliderState = sliderState,
-            modifier = Modifier.gradientMask(palette.accentBrush()),
+            modifier = Modifier.gradientMask(palette.animatedAccentBrush()),
             colors = activeTrackColors,
         )
         if (chapterMarks.isNotEmpty()) {

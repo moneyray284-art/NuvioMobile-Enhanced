@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.animatedAccentBrush
 import com.nuvio.app.core.ui.nuvioTypeScale
 import com.nuvio.app.core.ui.themePalette
 import nuvio.composeapp.generated.resources.Res
@@ -152,7 +152,7 @@ private fun PlayerGestureFeedback(
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
                                     .fillMaxHeight(animatedLevel)
-                                    .background(MaterialTheme.themePalette.accentBrush()),
+                                    .background(MaterialTheme.themePalette.animatedAccentBrush()),
                             )
                         }
                     }

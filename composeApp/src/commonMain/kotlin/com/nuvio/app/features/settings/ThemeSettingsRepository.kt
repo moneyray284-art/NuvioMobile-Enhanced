@@ -1,6 +1,7 @@
 package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.ui.AppTheme
+import com.nuvio.app.core.ui.AppGlassUiMode
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
@@ -41,6 +42,15 @@ object ThemeSettingsRepository {
 
     private val _amoledEnabled = MutableStateFlow(false)
     val amoledEnabled: StateFlow<Boolean> = _amoledEnabled.asStateFlow()
+
+    private val _animatedGradientsEnabled = MutableStateFlow(true)
+    val animatedGradientsEnabled: StateFlow<Boolean> = _animatedGradientsEnabled.asStateFlow()
+
+    private val _animatedThemeOpacity = MutableStateFlow(0.85f)
+    val animatedThemeOpacity: StateFlow<Float> = _animatedThemeOpacity.asStateFlow()
+
+    private val _glassUiMode = MutableStateFlow(AppGlassUiMode.OFF)
+    val glassUiMode: StateFlow<AppGlassUiMode> = _glassUiMode.asStateFlow()
 
     private val _tabBarBehavior = MutableStateFlow(NuvioTabBarBehavior.Default)
     val tabBarBehavior: StateFlow<NuvioTabBarBehavior> = _tabBarBehavior.asStateFlow()
@@ -112,6 +122,9 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.Default
         _customThemeColors.value = CustomThemeColors.solid(CustomThemeColors.Default.second)
         _amoledEnabled.value = false
+        _animatedGradientsEnabled.value = true
+        _animatedThemeOpacity.value = 0.85f
+        _glassUiMode.value = AppGlassUiMode.OFF
         _tabBarBehavior.value = NuvioTabBarBehavior.Default
         _liquidGlassNativeTabBarEnabled.value = NuvioTabBarBehavior.Default.isEnabled
         _dynamicArtworkBackgroundEnabled.value = false
@@ -152,6 +165,12 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         applyEffectiveTheme()
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
+        _animatedGradientsEnabled.value = ThemeSettingsStorage.loadAnimatedGradientsEnabled() ?: true
+        _animatedThemeOpacity.value = (ThemeSettingsStorage.loadAnimatedThemeOpacity() ?: 0.85f)
+            .coerceIn(0.15f, 1f)
+        _glassUiMode.value = ThemeSettingsStorage.loadGlassUiMode()
+            ?.let { raw -> runCatching { AppGlassUiMode.valueOf(raw) }.getOrNull() }
+            ?: AppGlassUiMode.OFF
         val behavior = NuvioTabBarBehavior.fromKey(ThemeSettingsStorage.loadTabBarBehavior())
             ?: NuvioTabBarBehavior.fromLegacyEnabled(
                 ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled(),
@@ -214,6 +233,32 @@ object ThemeSettingsRepository {
         if (_amoledEnabled.value == enabled) return
         _amoledEnabled.value = enabled
         ThemeSettingsStorage.saveAmoledEnabled(enabled)
+    }
+
+    fun setAnimatedGradientsEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_animatedGradientsEnabled.value == enabled) return
+        _animatedGradientsEnabled.value = enabled
+        ThemeSettingsStorage.saveAnimatedGradientsEnabled(enabled)
+    }
+
+    /** Updates only in-memory state so the opacity slider remains smooth while it is dragged. */
+    fun updateAnimatedThemeOpacity(opacity: Float) {
+        ensureLoaded()
+        _animatedThemeOpacity.value = opacity.coerceIn(0.15f, 1f)
+    }
+
+    /** Call once at the end of a slider gesture to avoid writes on every drag frame. */
+    fun persistAnimatedThemeOpacity() {
+        ensureLoaded()
+        ThemeSettingsStorage.saveAnimatedThemeOpacity(_animatedThemeOpacity.value)
+    }
+
+    fun setGlassUiMode(mode: AppGlassUiMode) {
+        ensureLoaded()
+        if (_glassUiMode.value == mode) return
+        _glassUiMode.value = mode
+        ThemeSettingsStorage.saveGlassUiMode(mode.name)
     }
 
     fun setTabBarBehavior(behavior: NuvioTabBarBehavior) {

@@ -103,7 +103,7 @@ fun NuvioModalBottomSheet(
     fullHeight: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    if (usesNativeNuvioBottomSheet && !isGlassUiActive()) {
+    if (usesNativeNuvioBottomSheet && !isGlassUiActive() && LocalAppGlassUiMode.current == AppGlassUiMode.OFF) {
         NuvioNativeModalBottomSheet(
             onDismissRequest = onDismissRequest,
             modifier = modifier,
@@ -143,6 +143,7 @@ fun NuvioModalBottomSheet(
                             shape = SheetShape,
                             containerColor = containerColor,
                         )
+                        .globalGlassSurface(SheetShape)
                         .then(if (sheetGlassReady) Modifier else Modifier.border(tokens.borders.thin, SurfaceEdge, SheetShape)),
                 ) {
                     if (showDragHandle) {

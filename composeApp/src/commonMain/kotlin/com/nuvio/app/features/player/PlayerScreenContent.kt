@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.LocalFold
+import com.nuvio.app.core.ui.AnimatedThemePlaybackGate
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
@@ -95,6 +98,12 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
     // below are exposed through derived states that only change when the values do.
     val isPlaying by remember(runtime) {
         derivedStateOf { runtime.playbackSnapshot.isPlaying }
+    }
+    LaunchedEffect(isPlaying) {
+        AnimatedThemePlaybackGate.setVideoPlaybackActive(isPlaying)
+    }
+    DisposableEffect(runtime) {
+        onDispose { AnimatedThemePlaybackGate.setVideoPlaybackActive(false) }
     }
     val videoSize by remember(runtime) {
         derivedStateOf {
