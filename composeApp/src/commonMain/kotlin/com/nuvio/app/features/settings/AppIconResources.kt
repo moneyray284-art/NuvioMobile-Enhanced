@@ -55,8 +55,6 @@ internal fun AppTheme.wordmarkResource(fallback: AppIconOption): DrawableResourc
         AppTheme.ARCTIC_BLUE -> AppIconOption.ARCTIC_BLUE.wordmarkResource
         AppTheme.GRAPHITE -> AppIconOption.GRAPHITE.wordmarkResource
         AppTheme.SUNSET -> AppIconOption.SUNSET.wordmarkResource
-        AppTheme.CYBER_MINT -> AppIconOption.CYBER_MINT.wordmarkResource
         AppTheme.AMETHYST -> AppIconOption.AMETHYST.wordmarkResource
-        AppTheme.SOLAR_FLARE -> AppIconOption.SOLAR_FLARE.wordmarkResource
         else -> fallback.wordmarkResource
     }

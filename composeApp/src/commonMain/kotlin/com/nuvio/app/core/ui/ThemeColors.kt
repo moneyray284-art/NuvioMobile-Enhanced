@@ -190,25 +190,6 @@ object ThemeColors {
         backgroundCard = Color(0xFF261822),
     )
 
-    val CyberMint = ThemeColorPalette(
-        secondary = Color(0xFF10B981),
-        secondaryVariant = Color(0xFF38BDF8),
-        accentGradient = listOf(
-            Color(0xFF10B981),
-            Color(0xFF38BDF8),
-            Color(0xFFA7F3D0),
-            Color(0xFF10B981),
-        ),
-        nativeAccentHex = "#10B981",
-        onSecondary = Color(0xFF111111),
-        onSecondaryVariant = Color(0xFF111111),
-        focusRing = Color(0xFF10B981),
-        focusBackground = Color(0xFF1A3D2A),
-        background = Color(0xFF09100C),
-        backgroundElevated = Color(0xFF111E17),
-        backgroundCard = Color(0xFF16281F),
-    )
-
     val Amethyst = ThemeColorPalette(
         secondary = Color(0xFFA855F7),
         secondaryVariant = Color(0xFFEC4899),
@@ -224,25 +205,6 @@ object ThemeColors {
         background = Color(0xFF0B0B14),
         backgroundElevated = Color(0xFF151424),
         backgroundCard = Color(0xFF1C1B2F),
-    )
-
-    val SolarFlare = ThemeColorPalette(
-        secondary = Color(0xFFF97316),
-        secondaryVariant = Color(0xFFEA580C),
-        accentGradient = listOf(
-            Color(0xFFFACC15),
-            Color(0xFFEA580C),
-            Color(0xFFEF4444),
-            Color(0xFFFACC15),
-        ),
-        nativeAccentHex = "#F97316",
-        onSecondary = Color(0xFF111111),
-        onSecondaryVariant = Color.White,
-        focusRing = Color(0xFFF97316),
-        focusBackground = Color(0xFF3D1F14),
-        background = Color(0xFF120B0A),
-        backgroundElevated = Color(0xFF221412),
-        backgroundCard = Color(0xFF2C1A17),
     )
 
     val AuroraVeil = ThemeColorPalette(
@@ -296,6 +258,101 @@ object ThemeColors {
         backgroundCard = Color(0xFF1B222D),
     )
 
+    val TitaniumMist = ThemeColorPalette(
+        secondary = Color(0xFF94A3B8),
+        secondaryVariant = Color(0xFF64748B),
+        accentGradient = listOf(
+            Color(0xFF4B5563),
+            Color(0xFF64748B),
+            Color(0xFF94A3B8),
+            Color(0xFF475569),
+        ),
+        nativeAccentHex = "#94A3B8",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFF94A3B8),
+        focusBackground = Color(0xFF252D38),
+        background = Color(0xFF10151C),
+        backgroundElevated = Color(0xFF191F28),
+        backgroundCard = Color(0xFF222A35),
+    )
+
+    val ObsidianBronze = ThemeColorPalette(
+        secondary = Color(0xFFB89B7A),
+        secondaryVariant = Color(0xFF8C6D4F),
+        accentGradient = listOf(
+            Color(0xFF29221E),
+            Color(0xFF5C4433),
+            Color(0xFF8C6D4F),
+            Color(0xFF3B2D24),
+        ),
+        nativeAccentHex = "#B89B7A",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFFB89B7A),
+        focusBackground = Color(0xFF332920),
+        background = Color(0xFF120F0D),
+        backgroundElevated = Color(0xFF1E1915),
+        backgroundCard = Color(0xFF2A221C),
+    )
+
+    val NordicPine = ThemeColorPalette(
+        secondary = Color(0xFF5F8D84),
+        secondaryVariant = Color(0xFF365E57),
+        accentGradient = listOf(
+            Color(0xFF162B28),
+            Color(0xFF244741),
+            Color(0xFF365E57),
+            Color(0xFF1B3531),
+        ),
+        nativeAccentHex = "#5F8D84",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFF5F8D84),
+        focusBackground = Color(0xFF1C332F),
+        background = Color(0xFF0B1110),
+        backgroundElevated = Color(0xFF141D1B),
+        backgroundCard = Color(0xFF1B2724),
+    )
+
+    val DuskSlate = ThemeColorPalette(
+        secondary = Color(0xFF868CB0),
+        secondaryVariant = Color(0xFF53587A),
+        accentGradient = listOf(
+            Color(0xFF23273A),
+            Color(0xFF3B3E5B),
+            Color(0xFF53587A),
+            Color(0xFF2B2F45),
+        ),
+        nativeAccentHex = "#868CB0",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFF868CB0),
+        focusBackground = Color(0xFF292D43),
+        background = Color(0xFF0D0F17),
+        backgroundElevated = Color(0xFF171A26),
+        backgroundCard = Color(0xFF202436),
+    )
+
+    val SmokedMerlot = ThemeColorPalette(
+        secondary = Color(0xFFA66376),
+        secondaryVariant = Color(0xFF6E3446),
+        accentGradient = listOf(
+            Color(0xFF2D161E),
+            Color(0xFF522534),
+            Color(0xFF6E3446),
+            Color(0xFF381B25),
+        ),
+        nativeAccentHex = "#A66376",
+        onSecondary = Color.White,
+        onSecondaryVariant = Color.White,
+        focusRing = Color(0xFFA66376),
+        focusBackground = Color(0xFF351D27),
+        background = Color(0xFF120B0E),
+        backgroundElevated = Color(0xFF20151A),
+        backgroundCard = Color(0xFF2B1B22),
+    )
+
     fun getColorPalette(
         theme: AppTheme,
         customColors: CustomThemeColors = CustomThemeColors.Default,
@@ -314,12 +371,15 @@ object ThemeColors {
         AppTheme.ROSE -> Rose
         AppTheme.WHITE -> White
         AppTheme.SUNSET -> Sunset
-        AppTheme.CYBER_MINT -> CyberMint
         AppTheme.AMETHYST -> Amethyst
-        AppTheme.SOLAR_FLARE -> SolarFlare
         AppTheme.AURORA_VEIL -> AuroraVeil
         AppTheme.VELVET_ECLIPSE -> VelvetEclipse
         AppTheme.MIDNIGHT_TIDE -> MidnightTide
+        AppTheme.TITANIUM_MIST -> TitaniumMist
+        AppTheme.OBSIDIAN_BRONZE -> ObsidianBronze
+        AppTheme.NORDIC_PINE -> NordicPine
+        AppTheme.DUSK_SLATE -> DuskSlate
+        AppTheme.SMOKED_MERLOT -> SmokedMerlot
     }
 }
 

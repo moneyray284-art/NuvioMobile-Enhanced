@@ -143,14 +143,10 @@ object ThemeSettingsRepository {
     private fun loadFromDisk() {
         hasLoaded = true
         val stored = ThemeSettingsStorage.loadSelectedTheme()
-        val theme = if (stored != null) {
-            try {
-                AppTheme.valueOf(stored)
-            } catch (_: IllegalArgumentException) {
-                null
-            }
-        } else {
-            null
+        val theme = when (stored?.uppercase()) {
+            "CYBER_MINT", "SOLAR_FLARE" -> AppTheme.MIDNIGHT_TIDE
+            null -> null
+            else -> runCatching { AppTheme.valueOf(stored) }.getOrNull()
         }
         _selectedThemePreference.value = theme
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
