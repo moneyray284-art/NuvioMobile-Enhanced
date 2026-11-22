@@ -13,6 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -37,6 +39,9 @@ import kotlinx.coroutines.isActive
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 val LocalThemePalette = staticCompositionLocalOf { ThemeColors.White }
 val LocalThemeGradientPhase = staticCompositionLocalOf { 0f }
+val LocalThemeGradientPhaseState = staticCompositionLocalOf<State<Float>> { mutableStateOf(0f) }
+val LocalAnimatedGradientEnabled = staticCompositionLocalOf { true }
+val LocalAnimatedThemeOpacity = staticCompositionLocalOf { 0.85f }
 
 val MaterialTheme.themePalette: ThemeColorPalette
     @Composable
@@ -231,7 +236,8 @@ fun NuvioTheme(
             gradientPhaseState.snapTo(0f)
         }
     }
-    val gradientPhase by gradientPhaseState.asState()
+    val gradientPhaseStateValue = remember(gradientPhaseState) { gradientPhaseState.asState() }
+    val gradientPhase by gradientPhaseStateValue
     val palette = remember(appTheme, customThemeColors, gradientPhase, animatedGradientEnabled, animatedThemeOpacity) {
         ThemeColors.getColorPalette(appTheme, customThemeColors)
             .let { basePalette ->
@@ -259,6 +265,9 @@ fun NuvioTheme(
         LocalAppTheme provides appTheme,
         LocalThemePalette provides palette,
         LocalThemeGradientPhase provides gradientPhase,
+        LocalThemeGradientPhaseState provides gradientPhaseStateValue,
+        LocalAnimatedGradientEnabled provides animatedGradientEnabled,
+        LocalAnimatedThemeOpacity provides animatedThemeOpacity,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

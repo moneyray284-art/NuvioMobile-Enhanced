@@ -58,8 +58,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -351,11 +357,68 @@ fun NuvioBackButton(
 ) {
     if (hiddenUnderNativeNavigation && LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) return
 
+    val appTheme = LocalAppTheme.current
+    val accentColor = MaterialTheme.nuvio.colors.accent
+    val gradientPhaseState = LocalThemeGradientPhaseState.current
+    val animatedGradientEnabled = LocalAnimatedGradientEnabled.current
+    val animatedThemeOpacity = LocalAnimatedThemeOpacity.current
+    val animatedRimPalette = remember(appTheme) {
+        if (appTheme.isAnimatedGradient) {
+            ThemeColors.getColorPalette(appTheme)
+        } else {
+            null
+        }
+    }
+    val rimBrushAtPhase: (Float) -> Brush = remember(
+        appTheme,
+        animatedGradientEnabled,
+        animatedThemeOpacity,
+        accentColor,
+        animatedRimPalette,
+    ) {
+        { phase ->
+            if (appTheme.isAnimatedGradient && animatedGradientEnabled && phase > 0f) {
+                animatedRimPalette
+                    ?.withGradientOffset(phase)
+                    ?.withAnimatedOpacity(animatedThemeOpacity)
+                    ?.accentBrush()
+                    ?: SolidColor(accentColor)
+            } else {
+                SolidColor(accentColor)
+            }
+        }
+    }
+    val rimGlow = accentColor.copy(alpha = 0.22f)
+
     Box(
         modifier = modifier
             .size(buttonSize)
+            .shadow(
+                elevation = 5.dp,
+                shape = shape,
+                clip = false,
+                ambientColor = rimGlow,
+                spotColor = rimGlow,
+            )
             .clip(shape)
             .background(containerColor)
+            .drawWithCache {
+                val outline = shape.createOutline(size, layoutDirection, this)
+                val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
+                onDrawBehind {
+                    drawOutline(
+                        outline = outline,
+                        brush = rimBrush,
+                        alpha = 0.13f,
+                        style = Stroke(width = 6.dp.toPx()),
+                    )
+                    drawOutline(
+                        outline = outline,
+                        brush = rimBrush,
+                        style = Stroke(width = 1.5.dp.toPx()),
+                    )
+                }
+            }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

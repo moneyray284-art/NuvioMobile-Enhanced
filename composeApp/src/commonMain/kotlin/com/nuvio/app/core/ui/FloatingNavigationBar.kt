@@ -31,12 +31,15 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -126,16 +129,38 @@ internal fun FloatingNavigationBar(
     )
     val tokens = MaterialTheme.nuvio
     val accentColor = tokens.colors.accent
+    val appTheme = LocalAppTheme.current
+    val gradientPhaseState = LocalThemeGradientPhaseState.current
+    val animatedGradientEnabled = LocalAnimatedGradientEnabled.current
+    val animatedThemeOpacity = LocalAnimatedThemeOpacity.current
+    val animatedRimPalette = remember(appTheme) {
+        if (appTheme.isAnimatedGradient) {
+            ThemeColors.getColorPalette(appTheme)
+        } else {
+            null
+        }
+    }
+    val rimBrushAtPhase: (Float) -> Brush = remember(
+        appTheme,
+        animatedGradientEnabled,
+        animatedThemeOpacity,
+        accentColor,
+        animatedRimPalette,
+    ) {
+        { phase ->
+            if (appTheme.isAnimatedGradient && animatedGradientEnabled && phase > 0f) {
+                animatedRimPalette
+                    ?.withGradientOffset(phase)
+                    ?.withAnimatedOpacity(animatedThemeOpacity)
+                    ?.accentBrush()
+                    ?: SolidColor(accentColor)
+            } else {
+                SolidColor(accentColor)
+            }
+        }
+    }
     val selectionHighlightBase = tokens.colors.surface.copy(alpha = NuvioTokens.Opacity.medium)
     val selectionHighlightFill = accentColor.copy(alpha = accentColor.alpha * 0.2f)
-    val selectionHighlightRim = remember(accentColor) {
-        Brush.verticalGradient(
-            listOf(
-                accentColor.copy(alpha = accentColor.alpha * 0.6f),
-                accentColor.copy(alpha = accentColor.alpha * 0.15f),
-            ),
-        )
-    }
     val labelFraction by animateFloatAsState(
         targetValue = scrollState?.labelVisibility ?: 1f,
         animationSpec = tween(NuvioTokens.Motion.sheetEnterMillis, easing = NuvioTokens.Motion.standard),
@@ -298,11 +323,26 @@ internal fun FloatingNavigationBar(
                             ) {
                                 Box(
                                     Modifier.matchParentSize()
-                                        .drawWithContent {
-                                            drawContent()
+                                        .drawWithCache {
                                             val outline = floatingBarShape.createOutline(size, layoutDirection, this)
-                                            clipPath(Path().apply { addOutline(outline) }) {
-                                                drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
+                                            val outlinePath = Path().apply { addOutline(outline) }
+                                            val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
+                                            onDrawWithContent {
+                                                drawContent()
+                                                clipPath(outlinePath) {
+                                                    drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
+                                                }
+                                                drawOutline(
+                                                    outline = outline,
+                                                    brush = rimBrush,
+                                                    alpha = 0.12f * glowStrength,
+                                                    style = Stroke(width = 7.dp.toPx()),
+                                                )
+                                                drawOutline(
+                                                    outline = outline,
+                                                    brush = rimBrush,
+                                                    style = Stroke(width = 1.5.dp.toPx()),
+                                                )
                                             }
                                         },
                                 ) {
@@ -468,13 +508,14 @@ internal fun FloatingNavigationBar(
                                         .clearAndSetSemantics {}
                                         .drawBehind {
                                             val frame = motion.frame
+                                            val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
                                             val emphasis = 1f - 0.5f * ((frame.contentScale - 1f) / 0.2f).coerceIn(0f, 1f)
                                             val pill = jellyPillPath(frame, items.size, selectionPillCornerRadiusPercent)
                                             drawPath(pill, selectionHighlightBase, alpha = emphasis)
                                             drawPath(pill, selectionHighlightFill, alpha = emphasis)
                                             drawPath(
                                                 path = pill,
-                                                brush = selectionHighlightRim,
+                                                brush = rimBrush,
                                                 style = Stroke(1.dp.toPx()),
                                                 alpha = emphasis,
                                             )
@@ -532,18 +573,21 @@ internal fun FloatingNavigationBar(
                                                     }
                                                 }
                                             } else {
-                                                Modifier.drawWithContent {
-                                                    drawJellyPill(
-                                                        motion.frame,
-                                                        items.size,
-                                                        SolidSelectionPillFill,
-                                                        accentColor.copy(alpha = accentColor.alpha * glowStrength),
-                                                    ) { this@drawWithContent.drawContent() }
-                                                    drawPath(
-                                                        path = jellyPillPath(motion.frame, items.size),
-                                                        color = SolidSelectionPillEdge,
-                                                        style = Stroke(1.dp.toPx()),
-                                                    )
+                                                Modifier.drawWithCache {
+                                                    val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
+                                                    onDrawWithContent {
+                                                        drawJellyPill(
+                                                            motion.frame,
+                                                            items.size,
+                                                            SolidSelectionPillFill,
+                                                            accentColor.copy(alpha = accentColor.alpha * glowStrength),
+                                                        ) { this@onDrawWithContent.drawContent() }
+                                                        drawPath(
+                                                            path = jellyPillPath(motion.frame, items.size),
+                                                            brush = rimBrush,
+                                                            style = Stroke(1.dp.toPx()),
+                                                        )
+                                                    }
                                                 }
                                             },
                                         ),
@@ -682,4 +726,3 @@ internal suspend fun PointerInputScope.detectJellyTabGestures(
 }
 
 private val SolidSelectionPillFill = Color.Black.copy(alpha = 0.34f)
-private val SolidSelectionPillEdge = Color.White.copy(alpha = 0.28f)
