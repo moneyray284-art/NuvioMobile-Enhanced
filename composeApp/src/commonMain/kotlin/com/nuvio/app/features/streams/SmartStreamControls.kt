@@ -67,9 +67,6 @@ import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.backdropControlColor
 import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 import com.nuvio.app.core.ui.nuvio
-import com.nuvio.app.core.ui.animatedAccentBrush
-import com.nuvio.app.core.ui.globalGlassSurface
-import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.downloads.DownloadNetworkGuard
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -597,8 +594,7 @@ private fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier 
         modifier = modifier
             .height(52.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.themePalette.animatedAccentBrush())
-            .globalGlassSurface(RoundedCornerShape(14.dp))
+            .background(colors.accent)
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,

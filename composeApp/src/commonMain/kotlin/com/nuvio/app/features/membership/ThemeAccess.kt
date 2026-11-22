@@ -2,6 +2,7 @@ package com.nuvio.app.features.membership
 
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
+import com.nuvio.app.isIos
 
 private val supporterThemes = linkedMapOf(
     AppTheme.GOLD to CosmeticEntitlement.GOLD_THEME,
@@ -11,11 +12,22 @@ private val supporterThemes = linkedMapOf(
     AppTheme.GRAPHITE to CosmeticEntitlement.GRAPHITE_THEME,
 )
 
+private val standardThemes = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot {
+    it == AppTheme.WHITE || it == AppTheme.CUSTOM || it in supporterThemes
+}
+private val iosOnlyThemes = setOf(
+    AppTheme.SUNSET,
+    AppTheme.CYBER_MINT,
+    AppTheme.AMETHYST,
+    AppTheme.SOLAR_FLARE,
+)
 
 fun availableAppThemes(entitlements: CosmeticEntitlements): List<AppTheme> {
-    return AppTheme.entries.filter { theme ->
-        theme == AppTheme.CUSTOM || theme !in supporterThemes || entitlements.includes(supporterThemes.getValue(theme))
-    }
+    val supporter = supporterThemes
+        .filterValues(entitlements::includes)
+        .keys
+        .toList()
+    return supporter + AppTheme.CUSTOM + standardThemes.filter { isIos || it !in iosOnlyThemes }
 }
 
 fun resolveAppTheme(

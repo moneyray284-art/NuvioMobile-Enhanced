@@ -111,18 +111,8 @@ internal fun AppEnvironment(
     }.collectAsStateWithLifecycle()
 
     val customThemeColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
-    val animatedGradientsEnabled by ThemeSettingsRepository.animatedGradientsEnabled.collectAsStateWithLifecycle()
-    val animatedThemeOpacity by ThemeSettingsRepository.animatedThemeOpacity.collectAsStateWithLifecycle()
-    val glassUiMode by ThemeSettingsRepository.glassUiMode.collectAsStateWithLifecycle()
 
-    NuvioTheme(
-        appTheme = selectedTheme,
-        amoled = amoledEnabled,
-        customThemeColors = customThemeColors,
-        animatedGradientsEnabled = animatedGradientsEnabled,
-        animatedThemeOpacity = animatedThemeOpacity,
-        glassUiMode = glassUiMode,
-    ) {
+    NuvioTheme(appTheme = selectedTheme, amoled = amoledEnabled, customThemeColors = customThemeColors) {
         if (drawAppBackground) {
             AppBackgroundHost {
                 content()

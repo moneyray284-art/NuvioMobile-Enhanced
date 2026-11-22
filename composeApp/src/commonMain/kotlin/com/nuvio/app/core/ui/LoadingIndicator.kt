@@ -36,7 +36,7 @@ fun NuvioLoadingIndicator(
     size: Dp = NuvioTokens.Space.s40,
     active: Boolean = LocalScreenActive.current,
 ) {
-    val brush = if (color == Color.Unspecified) MaterialTheme.themePalette.animatedAccentBrush() else SolidColor(color)
+    val brush = if (color == Color.Unspecified) MaterialTheme.themePalette.accentBrush() else SolidColor(color)
     Box(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center,

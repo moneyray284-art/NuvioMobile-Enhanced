@@ -55,8 +55,7 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioSectionLabel
-import com.nuvio.app.core.ui.animatedAccentBrush
-import com.nuvio.app.core.ui.globalGlassSurface
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
@@ -89,7 +88,7 @@ private fun SettingsCard(
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
-        modifier = modifier.fillMaxWidth().appGlassBackdrop(tokens.shapes.card).globalGlassSurface(tokens.shapes.card),
+        modifier = modifier.fillMaxWidth().appGlassBackdrop(tokens.shapes.card),
         color = tokens.colors.surface,
         shape = tokens.shapes.card,
         border = BorderStroke(
@@ -204,7 +203,7 @@ internal fun SettingsSidebarItem(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = if (selected) {
-                        Modifier.gradientMask(MaterialTheme.themePalette.animatedAccentBrush())
+                        Modifier.gradientMask(MaterialTheme.themePalette.accentBrush())
                     } else {
                         Modifier
                     },
@@ -333,7 +332,7 @@ internal fun SettingsNavigationRow(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                modifier = Modifier.gradientMask(MaterialTheme.themePalette.animatedAccentBrush()),
+                                modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                                 tint = tokens.colors.accent,
                             )
                         }

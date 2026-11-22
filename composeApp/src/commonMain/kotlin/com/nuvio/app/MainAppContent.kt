@@ -40,7 +40,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -54,7 +53,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import com.nuvio.app.core.ui.LocalPosterClickAnchor
-import com.nuvio.app.core.ui.LocalSharedGradientState
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.collectMappedAsState
 import com.nuvio.app.navigation.PosterNavigationState
@@ -1586,7 +1584,7 @@ internal fun MainAppContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(if (LocalSharedGradientState.current.enabled) Color.Transparent else MaterialTheme.nuvio.colors.background),
+                    .background(MaterialTheme.nuvio.colors.background),
             ) {
             Box(
                 modifier = Modifier
@@ -1598,7 +1596,7 @@ internal fun MainAppContent(
                             Modifier
                         },
                     )
-                    .background(if (LocalSharedGradientState.current.enabled) Color.Transparent else MaterialTheme.nuvio.colors.background),
+                    .background(MaterialTheme.nuvio.colors.background),
             ) {
             val verticalBarPadding = LocalVerticalBarPadding.current
             val drawsUnderVerticalBar = currentRoute.drawsUnderVerticalBar(selectedTab)

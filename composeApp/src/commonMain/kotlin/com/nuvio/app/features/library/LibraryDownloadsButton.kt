@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.rememberScreenActiveInfiniteFloat
@@ -43,7 +43,7 @@ internal fun LibraryDownloadsButton(onClick: () -> Unit) {
         when {
             downloads.items.any { it.isActive } -> FlowingDownloadIcon()
             hasUnseenCompleted -> DownloadIcon(
-                modifier = Modifier.gradientMask(MaterialTheme.themePalette.animatedAccentBrush()),
+                modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                 tint = Color.White,
             )
             else -> DownloadIcon(tint = MaterialTheme.colorScheme.onSurfaceVariant)

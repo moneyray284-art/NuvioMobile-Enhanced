@@ -174,126 +174,71 @@ object ThemeColors {
     )
 
     val Sunset = ThemeColorPalette(
-        secondary = Color(0xFFEC4899),
-        secondaryVariant = Color(0xFFF97316),
+        secondary = Color(0xFFF044A7),
+        secondaryVariant = Color(0xFF8D55FF),
         accentGradient = listOf(
-            Color(0xFFF43F5E),
-            Color(0xFFF97316),
-            Color(0xFFEC4899),
-            Color(0xFFF43F5E),
+            Color(0xFF8D55FF),
+            Color(0xFFF044A7),
+            Color(0xFFFF7048),
         ),
-        nativeAccentHex = "#EC4899",
-        focusRing = Color(0xFFEC4899),
-        focusBackground = Color(0xFF431B35),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF1B2130),
-        backgroundCard = Color(0xFF242B3C),
+        nativeAccentHex = "#FF7048",
+        focusRing = Color(0xFFFF7048),
+        focusBackground = Color(0xFF3D1A2A),
+        background = Color(0xFF100B0E),
+        backgroundElevated = Color(0xFF1E141B),
+        backgroundCard = Color(0xFF261822),
     )
 
     val CyberMint = ThemeColorPalette(
-        secondary = Color(0xFF10B981),
-        secondaryVariant = Color(0xFF38BDF8),
+        secondary = Color(0xFF2DDB83),
+        secondaryVariant = Color(0xFF14C8C8),
         accentGradient = listOf(
-            Color(0xFF10B981),
-            Color(0xFF38BDF8),
-            Color(0xFFA7F3D0),
-            Color(0xFF10B981),
+            Color(0xFFD5FF4F),
+            Color(0xFF2DDB83),
+            Color(0xFF14C8C8),
         ),
-        nativeAccentHex = "#10B981",
+        nativeAccentHex = "#D5FF4F",
         onSecondary = Color(0xFF111111),
         onSecondaryVariant = Color(0xFF111111),
-        focusRing = Color(0xFF10B981),
+        focusRing = Color(0xFFD5FF4F),
         focusBackground = Color(0xFF1A3D2A),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF1B2630),
-        backgroundCard = Color(0xFF23323A),
+        background = Color(0xFF09100C),
+        backgroundElevated = Color(0xFF111E17),
+        backgroundCard = Color(0xFF16281F),
     )
 
     val Amethyst = ThemeColorPalette(
-        secondary = Color(0xFFA855F7),
-        secondaryVariant = Color(0xFF7C3AED),
+        secondary = Color(0xFF984DFF),
+        secondaryVariant = Color(0xFF3B5BFF),
         accentGradient = listOf(
-            Color(0xFF7C3AED),
-            Color(0xFFEC4899),
-            Color(0xFF38BDF8),
-            Color(0xFF7C3AED),
+            Color(0xFF3B5BFF),
+            Color(0xFF984DFF),
+            Color(0xFFEA54FF),
         ),
-        nativeAccentHex = "#A855F7",
-        focusRing = Color(0xFFA855F7),
+        nativeAccentHex = "#EA54FF",
+        focusRing = Color(0xFFEA54FF),
         focusBackground = Color(0xFF25183D),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF211C34),
-        backgroundCard = Color(0xFF2B2540),
+        background = Color(0xFF0B0B14),
+        backgroundElevated = Color(0xFF151424),
+        backgroundCard = Color(0xFF1C1B2F),
     )
 
     val SolarFlare = ThemeColorPalette(
-        secondary = Color(0xFFF97316),
-        secondaryVariant = Color(0xFFEA580C),
+        secondary = Color(0xFFFF7324),
+        secondaryVariant = Color(0xFFFF3358),
         accentGradient = listOf(
-            Color(0xFFFACC15),
-            Color(0xFFEA580C),
-            Color(0xFFEF4444),
-            Color(0xFFFACC15),
+            Color(0xFFFF3358),
+            Color(0xFFFF7324),
+            Color(0xFFFFD338),
         ),
-        nativeAccentHex = "#F97316",
+        nativeAccentHex = "#FFD338",
         onSecondary = Color(0xFF111111),
         onSecondaryVariant = Color.White,
-        focusRing = Color(0xFFF97316),
+        focusRing = Color(0xFFFFD338),
         focusBackground = Color(0xFF3D1F14),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF30251B),
-        backgroundCard = Color(0xFF3D2E20),
-    )
-
-    val AuroraVeil = ThemeColorPalette(
-        secondary = Color(0xFF2DD4BF),
-        secondaryVariant = Color(0xFF6366F1),
-        accentGradient = listOf(
-            Color(0xFF0EA5E9),
-            Color(0xFF6366F1),
-            Color(0xFF2DD4BF),
-            Color(0xFF0EA5E9),
-        ),
-        nativeAccentHex = "#2DD4BF",
-        focusRing = Color(0xFF2DD4BF),
-        focusBackground = Color(0xFF163B42),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF1C2937),
-        backgroundCard = Color(0xFF243646),
-    )
-
-    val VelvetEclipse = ThemeColorPalette(
-        secondary = Color(0xFFF43F5E),
-        secondaryVariant = Color(0xFF9333EA),
-        accentGradient = listOf(
-            Color(0xFFBE123C),
-            Color(0xFF9333EA),
-            Color(0xFFF43F5E),
-            Color(0xFFBE123C),
-        ),
-        nativeAccentHex = "#F43F5E",
-        focusRing = Color(0xFFF43F5E),
-        focusBackground = Color(0xFF43192F),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF291B32),
-        backgroundCard = Color(0xFF36233F),
-    )
-
-    val MidnightTide = ThemeColorPalette(
-        secondary = Color(0xFF6B8CAE),
-        secondaryVariant = Color(0xFF3B2F63),
-        accentGradient = listOf(
-            Color(0xFF1E3A5F),
-            Color(0xFF3B2F63),
-            Color(0xFF0F4C5C),
-            Color(0xFF1E3A5F),
-        ),
-        nativeAccentHex = "#6B8CAE",
-        focusRing = Color(0xFF6B8CAE),
-        focusBackground = Color(0xFF1C3041),
-        background = Color(0xFF141923),
-        backgroundElevated = Color(0xFF1C2634),
-        backgroundCard = Color(0xFF253243),
+        background = Color(0xFF120B0A),
+        backgroundElevated = Color(0xFF221412),
+        backgroundCard = Color(0xFF2C1A17),
     )
 
     fun getColorPalette(
@@ -317,8 +262,5 @@ object ThemeColors {
         AppTheme.CYBER_MINT -> CyberMint
         AppTheme.AMETHYST -> Amethyst
         AppTheme.SOLAR_FLARE -> SolarFlare
-        AppTheme.AURORA_VEIL -> AuroraVeil
-        AppTheme.VELVET_ECLIPSE -> VelvetEclipse
-        AppTheme.MIDNIGHT_TIDE -> MidnightTide
     }
 }

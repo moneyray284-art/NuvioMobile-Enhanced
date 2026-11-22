@@ -56,7 +56,7 @@ import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogButtonStyle
 import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.themePalette
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appTheme
 import com.nuvio.app.core.ui.nuvio
 import nuvio.composeapp.generated.resources.Res
@@ -178,7 +178,7 @@ private fun AppUpdateBanner(
     )
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val isWhiteTheme = MaterialTheme.appTheme == AppTheme.WHITE
-    val progressBrush = MaterialTheme.themePalette.animatedAccentBrush()
+    val progressBrush = MaterialTheme.themePalette.accentBrush()
     val progressAlpha = if (isWhiteTheme) 0.18f else 1f
     val dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
     val debugTestComplete = state.isDebugTest && !state.isDownloading && !state.isUpdateAvailable

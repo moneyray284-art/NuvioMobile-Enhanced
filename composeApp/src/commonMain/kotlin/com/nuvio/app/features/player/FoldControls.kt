@@ -66,7 +66,7 @@ import com.nuvio.app.core.i18n.localizedEpisodeTitle
 import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvioTypeScale
 import com.nuvio.app.core.ui.themePalette
@@ -266,7 +266,7 @@ internal fun FoldControls(
             Tile(
                 onClick = interact(onTogglePlayback),
                 modifier = Modifier.weight(1.4f).fillMaxHeight(),
-                background = MaterialTheme.themePalette.animatedAccentBrush(),
+                background = MaterialTheme.themePalette.accentBrush(),
             ) {
                 if (playbackSnapshot.isLoading) {
                     NuvioLoadingIndicator(color = Color.White, modifier = Modifier.size(NuvioTokens.Icon.xxl))
@@ -537,7 +537,7 @@ private fun LevelTile(
     val fraction = level?.coerceIn(0f, 1f) ?: 0f
     val update: (Float) -> Unit = { level = write(it.coerceIn(0f, 1f)) ?: level }
     val currentUpdate by rememberUpdatedState(update)
-    val accent = MaterialTheme.themePalette.animatedAccentBrush()
+    val accent = MaterialTheme.themePalette.accentBrush()
     Box(
         modifier = modifier
             .fillMaxHeight()

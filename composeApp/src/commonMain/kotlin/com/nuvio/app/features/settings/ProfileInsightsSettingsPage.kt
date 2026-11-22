@@ -108,7 +108,7 @@ import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
@@ -1211,7 +1211,7 @@ private fun ProfileTasteCard(
                     modifier = Modifier
                         .size(52.dp)
                         .background(
-                            brush = MaterialTheme.themePalette.animatedAccentBrush(alpha = tokens.opacity.pressed),
+                            brush = MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed),
                             shape = RoundedCornerShape(18.dp),
                         ),
                     color = Color.Transparent,
@@ -1221,7 +1221,7 @@ private fun ProfileTasteCard(
                         Icon(
                             imageVector = Icons.Rounded.AutoAwesome,
                             contentDescription = null,
-                            modifier = Modifier.gradientMask(MaterialTheme.themePalette.animatedAccentBrush()),
+                            modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                             tint = tokens.colors.accent,
                         )
                     }
@@ -1581,7 +1581,7 @@ private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
                 .background(tokens.colors.borderSubtle),
         ) {
             val movieLeaning = stats.movieShare >= 0.5f
-            val accentBrush = MaterialTheme.themePalette.animatedAccentBrush()
+            val accentBrush = MaterialTheme.themePalette.accentBrush()
             val mutedBrush = SolidColor(tokens.colors.textMuted.copy(alpha = 0.42f))
             Box(
                 modifier = Modifier
@@ -1636,8 +1636,8 @@ private fun ProfileTasteDnaChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.themePalette.animatedAccentBrush(alpha = tokens.opacity.pressed))
-            .border(1.dp, MaterialTheme.themePalette.animatedAccentBrush(alpha = 0.22f), RoundedCornerShape(999.dp))
+            .background(MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed))
+            .border(1.dp, MaterialTheme.themePalette.accentBrush(alpha = 0.22f), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1647,7 +1647,7 @@ private fun ProfileTasteDnaChip(
             contentDescription = null,
             modifier = Modifier
                 .size(14.dp)
-                .gradientMask(MaterialTheme.themePalette.animatedAccentBrush()),
+                .gradientMask(MaterialTheme.themePalette.accentBrush()),
             tint = tokens.colors.accent,
         )
         Text(

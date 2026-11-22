@@ -41,7 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
 import com.nuvio.app.features.player.seekpreview.SeekPreviewController
@@ -143,7 +143,7 @@ internal fun PlayerTimeline(
     val chapterMarks = remember(chapters, durationMs) {
         chapters.chapterMarkFractions(durationMs)
     }
-    val accentBrush = MaterialTheme.themePalette.animatedAccentBrush()
+    val accentBrush = MaterialTheme.themePalette.accentBrush()
     val description = stringResource(Res.string.player_seek_position)
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
     val interactionSource = remember { MutableInteractionSource() }

@@ -1,9 +1,6 @@
 package com.nuvio.app.core.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
@@ -13,10 +10,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
@@ -31,26 +24,9 @@ import nuvio.composeapp.generated.resources.jetbrains_sans_bold
 import nuvio.composeapp.generated.resources.jetbrains_sans_regular
 import nuvio.composeapp.generated.resources.jetbrains_sans_semibold
 import org.jetbrains.compose.resources.Font
-import com.nuvio.app.isReducedMotionEnabled
-import kotlinx.coroutines.isActive
 
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 val LocalThemePalette = staticCompositionLocalOf { ThemeColors.White }
-val LocalAppGlassUiMode = staticCompositionLocalOf { AppGlassUiMode.OFF }
-
-/**
- * The single source of truth for every animated theme gradient in the composition.
- * Components consume this phase rather than owning their own transitions.
- */
-@Immutable
-data class SharedGradientState(
-    val phase: Float = 0f,
-    val enabled: Boolean = false,
-    val animated: Boolean = false,
-    val opacity: Float = 0.85f,
-)
-
-val LocalSharedGradientState = staticCompositionLocalOf { SharedGradientState() }
 
 val MaterialTheme.themePalette: ThemeColorPalette
     @Composable
@@ -82,36 +58,6 @@ private fun buildColorScheme(palette: ThemeColorPalette, amoled: Boolean = false
     error = Color(0xFFE36A8A),
     onError = Color(0xFFFCE5EC),
 )
-
-private fun NuvioThemeTokens.withGlobalGlass(mode: AppGlassUiMode): NuvioThemeTokens {
-    if (mode == AppGlassUiMode.OFF) return this
-    val c = colors
-    val liquid = mode == AppGlassUiMode.LIQUID_GLASS
-    val surfaceAlpha = if (liquid) 0.52f else 0.72f
-    val border = if (liquid) Color.White.copy(alpha = 0.34f) else c.accent.copy(alpha = 0.58f)
-    return copy(
-        colors = c.copy(
-            surface = c.surface.copy(alpha = surfaceAlpha),
-            surfaceElevated = c.surfaceElevated.copy(alpha = surfaceAlpha),
-            surfaceCard = c.surfaceCard.copy(alpha = surfaceAlpha),
-            surfaceSheet = c.surfaceSheet.copy(alpha = if (liquid) 0.64f else 0.78f),
-            surfaceDialog = c.surfaceDialog.copy(alpha = if (liquid) 0.68f else 0.82f),
-            surfacePopover = c.surfacePopover.copy(alpha = surfaceAlpha),
-            borderSubtle = border.copy(alpha = border.alpha * 0.60f),
-            borderDefault = border,
-            borderStrong = border.copy(alpha = minOf(1f, border.alpha + 0.18f)),
-            borderFocus = if (liquid) Color.White.copy(alpha = 0.72f) else c.accent,
-            borderSelected = c.accent.copy(alpha = 0.78f),
-        ),
-    )
-}
-
-private fun androidx.compose.material3.ColorScheme.withGlobalGlass(mode: AppGlassUiMode) =
-    if (mode == AppGlassUiMode.OFF) this else copy(
-        surface = surface.copy(alpha = if (mode == AppGlassUiMode.LIQUID_GLASS) 0.52f else 0.72f),
-        surfaceVariant = surfaceVariant.copy(alpha = if (mode == AppGlassUiMode.LIQUID_GLASS) 0.52f else 0.72f),
-        outline = if (mode == AppGlassUiMode.LIQUID_GLASS) Color.White.copy(alpha = 0.34f) else primary.copy(alpha = 0.58f),
-    )
 
 private val JetBrainsSans: FontFamily
     @Composable
@@ -252,46 +198,13 @@ fun NuvioTheme(
     appTheme: AppTheme = AppTheme.WHITE,
     amoled: Boolean = false,
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
-    animatedGradientsEnabled: Boolean = true,
-    animatedThemeOpacity: Float = 0.85f,
-    glassUiMode: AppGlassUiMode = AppGlassUiMode.OFF,
     content: @Composable () -> Unit,
 ) {
     val palette = remember(appTheme, customThemeColors) {
         ThemeColors.getColorPalette(appTheme, customThemeColors)
     }
-    val videoPlaybackActive by AnimatedThemePlaybackGate.videoPlaybackActive.collectAsState()
-    val isAnimatedTheme = appTheme.isAnimatedGradientTheme
-    val safeOpacity = animatedThemeOpacity.coerceIn(0.15f, 1f)
-    val reducedMotion = isReducedMotionEnabled()
-    val shouldAnimate = isAnimatedTheme && animatedGradientsEnabled && !reducedMotion && !videoPlaybackActive
-    val phase = remember { Animatable(0f) }
-    LaunchedEffect(shouldAnimate, isAnimatedTheme, animatedGradientsEnabled, reducedMotion) {
-        if (!isAnimatedTheme || !animatedGradientsEnabled || reducedMotion) {
-            phase.snapTo(0f)
-        } else if (shouldAnimate) {
-            while (isActive) {
-                phase.animateTo(1f, animationSpec = tween(2_600, easing = LinearEasing))
-                if (isActive) phase.snapTo(0f)
-            }
-        }
-    }
-    val presentationPalette = remember(palette, isAnimatedTheme, safeOpacity) {
-        if (isAnimatedTheme) {
-            palette.copy(
-                secondary = palette.secondary.copy(alpha = safeOpacity),
-                secondaryVariant = palette.secondaryVariant.copy(alpha = safeOpacity),
-                focusRing = palette.focusRing.copy(alpha = safeOpacity),
-                onSecondary = if (safeOpacity < 0.68f) Color.White else palette.onSecondary,
-                onSecondaryVariant = if (safeOpacity < 0.68f) Color.White else palette.onSecondaryVariant,
-            )
-        } else {
-            palette
-        }
-    }
-    val colorScheme = buildColorScheme(presentationPalette, amoled = amoled).withGlobalGlass(glassUiMode)
-    val tokens = defaultNuvioThemeTokens(presentationPalette, amoled = amoled, colorScheme = colorScheme)
-        .withGlobalGlass(glassUiMode)
+    val colorScheme = buildColorScheme(palette, amoled = amoled)
+    val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
 
     val density = LocalDensity.current
     CompositionLocalProvider(
@@ -303,14 +216,7 @@ fun NuvioTheme(
         LocalNuvioTypeScale provides NuvioTypeTokens,
         LocalRippleConfiguration provides NuvioRippleConfiguration,
         LocalAppTheme provides appTheme,
-        LocalThemePalette provides presentationPalette,
-        LocalAppGlassUiMode provides glassUiMode,
-        LocalSharedGradientState provides SharedGradientState(
-            phase = phase.value,
-            enabled = isAnimatedTheme,
-            animated = isAnimatedTheme && animatedGradientsEnabled && !reducedMotion,
-            opacity = safeOpacity,
-        ),
+        LocalThemePalette provides palette,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

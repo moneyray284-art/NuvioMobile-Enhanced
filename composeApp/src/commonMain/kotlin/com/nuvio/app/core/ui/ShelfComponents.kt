@@ -312,7 +312,7 @@ private fun NuvioShelfSectionHeader(
                     .padding(top = NuvioTokens.Space.s6)
                     .width(NuvioTokens.Space.s64 - NuvioTokens.Space.s4)
                     .height(NuvioTokens.Space.s4)
-                    .background(brush = MaterialTheme.themePalette.animatedAccentBrush(), shape = tokens.shapes.chip),
+                    .background(brush = MaterialTheme.themePalette.accentBrush(), shape = tokens.shapes.chip),
             )
         }
     }

@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.AppLoadingProfileAvatar
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.profiles.ProfileRepository
@@ -193,7 +193,7 @@ private fun SettingsProfileCard(
             Box(
                 modifier = Modifier
                     .size(avatarSize)
-                    .border(2.5.dp, MaterialTheme.themePalette.animatedAccentBrush(), CircleShape)
+                    .border(2.5.dp, MaterialTheme.themePalette.accentBrush(), CircleShape)
                     .padding(4.dp),
             ) {
                 if (profile != null) {

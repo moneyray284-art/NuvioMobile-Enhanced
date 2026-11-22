@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.animatedAccentBrush
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioTypeScale
@@ -246,7 +246,7 @@ private fun TransferButton(
                 .size(NuvioTokens.Space.s32)
                 .then(
                     if (isDownloading) {
-                        Modifier.gradientMask(MaterialTheme.themePalette.animatedAccentBrush())
+                        Modifier.gradientMask(MaterialTheme.themePalette.accentBrush())
                     } else {
                         Modifier
                     },
