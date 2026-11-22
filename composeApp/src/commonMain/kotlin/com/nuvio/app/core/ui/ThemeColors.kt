@@ -323,24 +323,8 @@ object ThemeColors {
     }
 }
 
-/** Shift a cyclic animated palette without dimming it; used by both the shared theme and swatches. */
-fun ThemeColorPalette.withGradientOffset(phase: Float): ThemeColorPalette {
-    if (accentGradient.size < 3) return this
-    val anchors = if (accentGradient.first() == accentGradient.last()) accentGradient.dropLast(1) else accentGradient
-    if (anchors.size < 2) return this
-    fun sample(position: Float): Color {
-        val wrapped = ((position % 1f) + 1f) % 1f
-        val scaled = wrapped * anchors.size
-        val index = scaled.toInt().coerceIn(0, anchors.lastIndex)
-        val fraction = scaled - index
-        return androidx.compose.ui.graphics.lerp(anchors[index], anchors[(index + 1) % anchors.size], fraction)
-    }
-    val shifted = (0..anchors.size).map { index -> sample(phase + index.toFloat() / anchors.size) }
-    return copy(accentGradient = shifted)
-}
-
-/** Blend animated theme accents onto the fixed dark preview surface. */
-fun ThemeColorPalette.withAnimatedOpacity(opacity: Float): ThemeColorPalette {
+/** Blend gradient theme accents onto the fixed dark surface at the chosen opacity. */
+fun ThemeColorPalette.withGradientOpacity(opacity: Float): ThemeColorPalette {
     val base = Color(0xFF141923)
     fun blend(color: Color) = androidx.compose.ui.graphics.lerp(base, color, opacity.coerceIn(0.15f, 1f))
     return copy(

@@ -46,7 +46,7 @@ enum class AppTheme {
     MIDNIGHT_TIDE,
 }
 
-val AppTheme.isAnimatedGradient: Boolean
+val AppTheme.isGradientTheme: Boolean
     get() = when (this) {
         AppTheme.SUNSET,
         AppTheme.CYBER_MINT,

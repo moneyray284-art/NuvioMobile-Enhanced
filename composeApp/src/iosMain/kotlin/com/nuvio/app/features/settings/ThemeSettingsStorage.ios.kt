@@ -16,8 +16,8 @@ actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
     private const val customThemeColorsKey = "custom_theme_colors"
     private const val amoledEnabledKey = "amoled_enabled"
-    private const val animatedGradientEnabledKey = "animated_gradient_enabled"
-    private const val animatedThemeOpacityKey = "animated_theme_opacity"
+    private const val themeGradientOpacityKey = "theme_gradient_opacity"
+    private const val legacyAnimatedThemeOpacityKey = "animated_theme_opacity"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
@@ -75,26 +75,26 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(amoledEnabledKey))
     }
 
-    actual fun loadAnimatedGradientEnabled(): Boolean? {
+    actual fun loadThemeGradientOpacity(): Float? {
         val defaults = NSUserDefaults.standardUserDefaults
-        val key = ProfileScopedKey.of(animatedGradientEnabledKey)
-        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
+        val key = ProfileScopedKey.of(themeGradientOpacityKey)
+        if (defaults.objectForKey(key) != null) {
+            return defaults.doubleForKey(key).toFloat().coerceIn(0.15f, 1f)
+        }
+
+        // Migrate the previous slider value so profile-specific settings survive the rename.
+        val legacyKey = ProfileScopedKey.of(legacyAnimatedThemeOpacityKey)
+        if (defaults.objectForKey(legacyKey) == null) return null
+        val opacity = defaults.doubleForKey(legacyKey).toFloat().coerceIn(0.15f, 1f)
+        saveThemeGradientOpacity(opacity)
+        defaults.removeObjectForKey(legacyKey)
+        return opacity
     }
 
-    actual fun saveAnimatedGradientEnabled(enabled: Boolean) {
-        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(animatedGradientEnabledKey))
-    }
-
-    actual fun loadAnimatedThemeOpacity(): Float? {
-        val defaults = NSUserDefaults.standardUserDefaults
-        val key = ProfileScopedKey.of(animatedThemeOpacityKey)
-        return if (defaults.objectForKey(key) != null) defaults.doubleForKey(key).toFloat().coerceIn(0.15f, 1f) else null
-    }
-
-    actual fun saveAnimatedThemeOpacity(opacity: Float) {
+    actual fun saveThemeGradientOpacity(opacity: Float) {
         NSUserDefaults.standardUserDefaults.setDouble(
             opacity.coerceIn(0.15f, 1f).toDouble(),
-            forKey = ProfileScopedKey.of(animatedThemeOpacityKey),
+            forKey = ProfileScopedKey.of(themeGradientOpacityKey),
         )
     }
 

@@ -61,7 +61,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
@@ -359,34 +358,16 @@ fun NuvioBackButton(
 
     val appTheme = LocalAppTheme.current
     val accentColor = MaterialTheme.nuvio.colors.accent
-    val gradientPhaseState = LocalThemeGradientPhaseState.current
-    val animatedGradientEnabled = LocalAnimatedGradientEnabled.current
-    val animatedThemeOpacity = LocalAnimatedThemeOpacity.current
-    val animatedRimPalette = remember(appTheme) {
-        if (appTheme.isAnimatedGradient) {
-            ThemeColors.getColorPalette(appTheme)
+    val themeGradientOpacity = LocalThemeGradientOpacity.current
+    val gradientRimPalette = remember(appTheme, themeGradientOpacity) {
+        if (appTheme.isGradientTheme) {
+            ThemeColors.getColorPalette(appTheme).withGradientOpacity(themeGradientOpacity)
         } else {
             null
         }
     }
-    val rimBrushAtPhase: (Float) -> Brush = remember(
-        appTheme,
-        animatedGradientEnabled,
-        animatedThemeOpacity,
-        accentColor,
-        animatedRimPalette,
-    ) {
-        { phase ->
-            if (appTheme.isAnimatedGradient && animatedGradientEnabled && phase > 0f) {
-                animatedRimPalette
-                    ?.withGradientOffset(phase)
-                    ?.withAnimatedOpacity(animatedThemeOpacity)
-                    ?.accentBrush()
-                    ?: SolidColor(accentColor)
-            } else {
-                SolidColor(accentColor)
-            }
-        }
+    val rimBrush = remember(gradientRimPalette, accentColor) {
+        gradientRimPalette?.accentBrush() ?: SolidColor(accentColor)
     }
     val rimGlow = accentColor.copy(alpha = 0.22f)
 
@@ -404,7 +385,6 @@ fun NuvioBackButton(
             .background(containerColor)
             .drawWithCache {
                 val outline = shape.createOutline(size, layoutDirection, this)
-                val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
                 onDrawBehind {
                     drawOutline(
                         outline = outline,

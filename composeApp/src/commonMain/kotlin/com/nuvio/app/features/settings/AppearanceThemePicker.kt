@@ -45,11 +45,8 @@ import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.ThemeColors
-import com.nuvio.app.core.ui.LocalThemeGradientPhase
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.labelRes
-import com.nuvio.app.core.ui.isAnimatedGradient
-import com.nuvio.app.core.ui.withGradientOffset
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.availableAppThemes
@@ -66,13 +63,10 @@ internal fun AppearanceThemeSelector(
     onThemeSelected: (AppTheme) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
-    val gradientPhase = LocalThemeGradientPhase.current
     var expanded by rememberSaveable { mutableStateOf(false) }
     val customColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
-    val palette = remember(selectedTheme, customColors, gradientPhase) {
-        ThemeColors.getColorPalette(selectedTheme, customColors).let { base ->
-            if (selectedTheme.isAnimatedGradient) base.withGradientOffset(gradientPhase) else base
-        }
+    val palette = remember(selectedTheme, customColors) {
+        ThemeColors.getColorPalette(selectedTheme, customColors)
     }
     val chevronRotation by animateFloatAsState(if (expanded) 90f else 0f, label = "themeChevron")
     Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
@@ -187,11 +181,8 @@ private fun ThemeChip(
     modifier: Modifier = Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
-    val gradientPhase = LocalThemeGradientPhase.current
-    val palette = remember(theme, customColors, gradientPhase) {
-        ThemeColors.getColorPalette(theme, customColors).let { base ->
-            if (theme.isAnimatedGradient) base.withGradientOffset(gradientPhase) else base
-        }
+    val palette = remember(theme, customColors) {
+        ThemeColors.getColorPalette(theme, customColors)
     }
     Column(
         modifier = modifier

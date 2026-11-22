@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -130,34 +129,16 @@ internal fun FloatingNavigationBar(
     val tokens = MaterialTheme.nuvio
     val accentColor = tokens.colors.accent
     val appTheme = LocalAppTheme.current
-    val gradientPhaseState = LocalThemeGradientPhaseState.current
-    val animatedGradientEnabled = LocalAnimatedGradientEnabled.current
-    val animatedThemeOpacity = LocalAnimatedThemeOpacity.current
-    val animatedRimPalette = remember(appTheme) {
-        if (appTheme.isAnimatedGradient) {
-            ThemeColors.getColorPalette(appTheme)
+    val themeGradientOpacity = LocalThemeGradientOpacity.current
+    val gradientRimPalette = remember(appTheme, themeGradientOpacity) {
+        if (appTheme.isGradientTheme) {
+            ThemeColors.getColorPalette(appTheme).withGradientOpacity(themeGradientOpacity)
         } else {
             null
         }
     }
-    val rimBrushAtPhase: (Float) -> Brush = remember(
-        appTheme,
-        animatedGradientEnabled,
-        animatedThemeOpacity,
-        accentColor,
-        animatedRimPalette,
-    ) {
-        { phase ->
-            if (appTheme.isAnimatedGradient && animatedGradientEnabled && phase > 0f) {
-                animatedRimPalette
-                    ?.withGradientOffset(phase)
-                    ?.withAnimatedOpacity(animatedThemeOpacity)
-                    ?.accentBrush()
-                    ?: SolidColor(accentColor)
-            } else {
-                SolidColor(accentColor)
-            }
-        }
+    val rimBrush = remember(gradientRimPalette, accentColor) {
+        gradientRimPalette?.accentBrush() ?: SolidColor(accentColor)
     }
     val selectionHighlightBase = tokens.colors.surface.copy(alpha = NuvioTokens.Opacity.medium)
     val selectionHighlightFill = accentColor.copy(alpha = accentColor.alpha * 0.2f)
@@ -326,7 +307,6 @@ internal fun FloatingNavigationBar(
                                         .drawWithCache {
                                             val outline = floatingBarShape.createOutline(size, layoutDirection, this)
                                             val outlinePath = Path().apply { addOutline(outline) }
-                                            val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
                                             onDrawWithContent {
                                                 drawContent()
                                                 clipPath(outlinePath) {
@@ -508,7 +488,6 @@ internal fun FloatingNavigationBar(
                                         .clearAndSetSemantics {}
                                         .drawBehind {
                                             val frame = motion.frame
-                                            val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
                                             val emphasis = 1f - 0.5f * ((frame.contentScale - 1f) / 0.2f).coerceIn(0f, 1f)
                                             val pill = jellyPillPath(frame, items.size, selectionPillCornerRadiusPercent)
                                             drawPath(pill, selectionHighlightBase, alpha = emphasis)
@@ -574,7 +553,6 @@ internal fun FloatingNavigationBar(
                                                 }
                                             } else {
                                                 Modifier.drawWithCache {
-                                                    val rimBrush = rimBrushAtPhase(gradientPhaseState.value)
                                                     onDrawWithContent {
                                                         drawJellyPill(
                                                             motion.frame,

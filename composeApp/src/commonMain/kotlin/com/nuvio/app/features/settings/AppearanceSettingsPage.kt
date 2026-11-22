@@ -41,7 +41,7 @@ import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.labelRes
-import com.nuvio.app.core.ui.isAnimatedGradient
+import com.nuvio.app.core.ui.isGradientTheme
 import com.nuvio.app.isIos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
@@ -85,18 +85,9 @@ internal fun LazyListScope.appearanceSettingsContent(
                     selectedTheme = selectedTheme,
                     onThemeSelected = onThemeSelected,
                 )
-                if (selectedTheme.isAnimatedGradient) {
+                if (selectedTheme.isGradientTheme) {
                     SettingsGroupDivider(isTablet = isTablet)
-                    val animatedGradientEnabled by ThemeSettingsRepository.animatedGradientEnabled.collectAsStateWithLifecycle()
-                    SettingsSwitchRow(
-                        title = "Animated Gradient",
-                        description = "Move the selected theme gradient smoothly.",
-                        checked = animatedGradientEnabled,
-                        isTablet = isTablet,
-                        onCheckedChange = ThemeSettingsRepository::setAnimatedGradientEnabled,
-                    )
-                    SettingsGroupDivider(isTablet = isTablet)
-                    AnimatedThemeOpacityControl(isTablet = isTablet)
+                    ThemeGradientOpacityControl(isTablet = isTablet)
                 }
             }
         }
@@ -193,8 +184,8 @@ internal fun LazyListScope.appearanceSettingsContent(
 }
 
 @Composable
-private fun AnimatedThemeOpacityControl(isTablet: Boolean) {
-    val storedOpacity by ThemeSettingsRepository.animatedThemeOpacity.collectAsStateWithLifecycle()
+private fun ThemeGradientOpacityControl(isTablet: Boolean) {
+    val storedOpacity by ThemeSettingsRepository.themeGradientOpacity.collectAsStateWithLifecycle()
     var draftOpacity by remember { mutableFloatStateOf(storedOpacity) }
     var isDragging by remember { mutableStateOf(false) }
     LaunchedEffect(storedOpacity) {
@@ -213,7 +204,7 @@ private fun AnimatedThemeOpacityControl(isTablet: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Animated Theme Opacity",
+                text = "Theme Gradient Opacity",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium,
@@ -230,11 +221,11 @@ private fun AnimatedThemeOpacityControl(isTablet: Boolean) {
             onValueChange = { value ->
                 isDragging = true
                 draftOpacity = value
-                ThemeSettingsRepository.previewAnimatedThemeOpacity(value)
+                ThemeSettingsRepository.previewThemeGradientOpacity(value)
             },
             onValueChangeFinished = {
                 isDragging = false
-                ThemeSettingsRepository.saveAnimatedThemeOpacity(draftOpacity)
+                ThemeSettingsRepository.saveThemeGradientOpacity(draftOpacity)
             },
             valueRange = 0.15f..1f,
             steps = 0,
@@ -250,7 +241,7 @@ private fun AnimatedThemeOpacityControl(isTablet: Boolean) {
                         val value = percent / 100f
                         isDragging = false
                         draftOpacity = value
-                        ThemeSettingsRepository.saveAnimatedThemeOpacity(value)
+                        ThemeSettingsRepository.saveThemeGradientOpacity(value)
                     },
                 ) {
                     Text(text = "$percent%", color = Color.White)

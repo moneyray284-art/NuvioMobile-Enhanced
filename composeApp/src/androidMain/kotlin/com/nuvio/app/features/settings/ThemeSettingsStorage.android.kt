@@ -18,8 +18,8 @@ actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
     private const val customThemeColorsKey = "custom_theme_colors"
     private const val amoledEnabledKey = "amoled_enabled"
-    private const val animatedGradientEnabledKey = "animated_gradient_enabled"
-    private const val animatedThemeOpacityKey = "animated_theme_opacity"
+    private const val themeGradientOpacityKey = "theme_gradient_opacity"
+    private const val legacyAnimatedThemeOpacityKey = "animated_theme_opacity"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
@@ -87,24 +87,21 @@ actual object ThemeSettingsStorage {
             ?.apply()
     }
 
-    actual fun loadAnimatedGradientEnabled(): Boolean? =
-        preferences?.let { prefs ->
-            val key = ProfileScopedKey.of(animatedGradientEnabledKey)
-            if (prefs.contains(key)) prefs.getBoolean(key, true) else null
-        }
+    actual fun loadThemeGradientOpacity(): Float? {
+        val prefs = preferences ?: return null
+        val key = ProfileScopedKey.of(themeGradientOpacityKey)
+        if (prefs.contains(key)) return prefs.getFloat(key, 0.85f).coerceIn(0.15f, 1f)
 
-    actual fun saveAnimatedGradientEnabled(enabled: Boolean) {
-        preferences?.edit()?.putBoolean(ProfileScopedKey.of(animatedGradientEnabledKey), enabled)?.apply()
+        // Migrate the previous slider value so profile-specific settings survive the rename.
+        val legacyKey = ProfileScopedKey.of(legacyAnimatedThemeOpacityKey)
+        if (!prefs.contains(legacyKey)) return null
+        val opacity = prefs.getFloat(legacyKey, 0.85f).coerceIn(0.15f, 1f)
+        prefs.edit().putFloat(key, opacity).remove(legacyKey).apply()
+        return opacity
     }
 
-    actual fun loadAnimatedThemeOpacity(): Float? =
-        preferences?.let { prefs ->
-            val key = ProfileScopedKey.of(animatedThemeOpacityKey)
-            if (prefs.contains(key)) prefs.getFloat(key, 0.85f) else null
-        }
-
-    actual fun saveAnimatedThemeOpacity(opacity: Float) {
-        preferences?.edit()?.putFloat(ProfileScopedKey.of(animatedThemeOpacityKey), opacity.coerceIn(0.15f, 1f))?.apply()
+    actual fun saveThemeGradientOpacity(opacity: Float) {
+        preferences?.edit()?.putFloat(ProfileScopedKey.of(themeGradientOpacityKey), opacity.coerceIn(0.15f, 1f))?.apply()
     }
 
     actual fun loadNavBarGlowEnabled(): Boolean? =
