@@ -174,15 +174,16 @@ object ThemeColors {
     )
 
     val Sunset = ThemeColorPalette(
-        secondary = Color(0xFFF044A7),
-        secondaryVariant = Color(0xFF8D55FF),
+        secondary = Color(0xFFEC4899),
+        secondaryVariant = Color(0xFFF97316),
         accentGradient = listOf(
-            Color(0xFF8D55FF),
-            Color(0xFFF044A7),
-            Color(0xFFFF7048),
+            Color(0xFFF43F5E),
+            Color(0xFFF97316),
+            Color(0xFFEC4899),
+            Color(0xFFF43F5E),
         ),
-        nativeAccentHex = "#FF7048",
-        focusRing = Color(0xFFFF7048),
+        nativeAccentHex = "#EC4899",
+        focusRing = Color(0xFFEC4899),
         focusBackground = Color(0xFF3D1A2A),
         background = Color(0xFF100B0E),
         backgroundElevated = Color(0xFF1E141B),
@@ -190,17 +191,18 @@ object ThemeColors {
     )
 
     val CyberMint = ThemeColorPalette(
-        secondary = Color(0xFF2DDB83),
-        secondaryVariant = Color(0xFF14C8C8),
+        secondary = Color(0xFF10B981),
+        secondaryVariant = Color(0xFF38BDF8),
         accentGradient = listOf(
-            Color(0xFFD5FF4F),
-            Color(0xFF2DDB83),
-            Color(0xFF14C8C8),
+            Color(0xFF10B981),
+            Color(0xFF38BDF8),
+            Color(0xFFA7F3D0),
+            Color(0xFF10B981),
         ),
-        nativeAccentHex = "#D5FF4F",
+        nativeAccentHex = "#10B981",
         onSecondary = Color(0xFF111111),
         onSecondaryVariant = Color(0xFF111111),
-        focusRing = Color(0xFFD5FF4F),
+        focusRing = Color(0xFF10B981),
         focusBackground = Color(0xFF1A3D2A),
         background = Color(0xFF09100C),
         backgroundElevated = Color(0xFF111E17),
@@ -208,15 +210,16 @@ object ThemeColors {
     )
 
     val Amethyst = ThemeColorPalette(
-        secondary = Color(0xFF984DFF),
-        secondaryVariant = Color(0xFF3B5BFF),
+        secondary = Color(0xFFA855F7),
+        secondaryVariant = Color(0xFFEC4899),
         accentGradient = listOf(
-            Color(0xFF3B5BFF),
-            Color(0xFF984DFF),
-            Color(0xFFEA54FF),
+            Color(0xFF7C3AED),
+            Color(0xFFEC4899),
+            Color(0xFF38BDF8),
+            Color(0xFF7C3AED),
         ),
-        nativeAccentHex = "#EA54FF",
-        focusRing = Color(0xFFEA54FF),
+        nativeAccentHex = "#A855F7",
+        focusRing = Color(0xFFA855F7),
         focusBackground = Color(0xFF25183D),
         background = Color(0xFF0B0B14),
         backgroundElevated = Color(0xFF151424),
@@ -224,21 +227,73 @@ object ThemeColors {
     )
 
     val SolarFlare = ThemeColorPalette(
-        secondary = Color(0xFFFF7324),
-        secondaryVariant = Color(0xFFFF3358),
+        secondary = Color(0xFFF97316),
+        secondaryVariant = Color(0xFFEA580C),
         accentGradient = listOf(
-            Color(0xFFFF3358),
-            Color(0xFFFF7324),
-            Color(0xFFFFD338),
+            Color(0xFFFACC15),
+            Color(0xFFEA580C),
+            Color(0xFFEF4444),
+            Color(0xFFFACC15),
         ),
-        nativeAccentHex = "#FFD338",
+        nativeAccentHex = "#F97316",
         onSecondary = Color(0xFF111111),
         onSecondaryVariant = Color.White,
-        focusRing = Color(0xFFFFD338),
+        focusRing = Color(0xFFF97316),
         focusBackground = Color(0xFF3D1F14),
         background = Color(0xFF120B0A),
         backgroundElevated = Color(0xFF221412),
         backgroundCard = Color(0xFF2C1A17),
+    )
+
+    val AuroraVeil = ThemeColorPalette(
+        secondary = Color(0xFF2DD4BF),
+        secondaryVariant = Color(0xFF6366F1),
+        accentGradient = listOf(
+            Color(0xFF0EA5E9),
+            Color(0xFF6366F1),
+            Color(0xFF2DD4BF),
+            Color(0xFF0EA5E9),
+        ),
+        nativeAccentHex = "#2DD4BF",
+        focusRing = Color(0xFF2DD4BF),
+        focusBackground = Color(0xFF102B31),
+        background = Color(0xFF090C12),
+        backgroundElevated = Color(0xFF141923),
+        backgroundCard = Color(0xFF1B222D),
+    )
+
+    val VelvetEclipse = ThemeColorPalette(
+        secondary = Color(0xFFF43F5E),
+        secondaryVariant = Color(0xFF9333EA),
+        accentGradient = listOf(
+            Color(0xFFBE123C),
+            Color(0xFF9333EA),
+            Color(0xFFF43F5E),
+            Color(0xFFBE123C),
+        ),
+        nativeAccentHex = "#F43F5E",
+        focusRing = Color(0xFFF43F5E),
+        focusBackground = Color(0xFF321522),
+        background = Color(0xFF090C12),
+        backgroundElevated = Color(0xFF141923),
+        backgroundCard = Color(0xFF241A23),
+    )
+
+    val MidnightTide = ThemeColorPalette(
+        secondary = Color(0xFF6B8CAE),
+        secondaryVariant = Color(0xFF3B2F63),
+        accentGradient = listOf(
+            Color(0xFF1E3A5F),
+            Color(0xFF3B2F63),
+            Color(0xFF0F4C5C),
+            Color(0xFF1E3A5F),
+        ),
+        nativeAccentHex = "#6B8CAE",
+        focusRing = Color(0xFF6B8CAE),
+        focusBackground = Color(0xFF1A2534),
+        background = Color(0xFF090C12),
+        backgroundElevated = Color(0xFF141923),
+        backgroundCard = Color(0xFF1B222D),
     )
 
     fun getColorPalette(
@@ -262,5 +317,38 @@ object ThemeColors {
         AppTheme.CYBER_MINT -> CyberMint
         AppTheme.AMETHYST -> Amethyst
         AppTheme.SOLAR_FLARE -> SolarFlare
+        AppTheme.AURORA_VEIL -> AuroraVeil
+        AppTheme.VELVET_ECLIPSE -> VelvetEclipse
+        AppTheme.MIDNIGHT_TIDE -> MidnightTide
     }
+}
+
+/** Shift a cyclic animated palette without dimming it; used by both the shared theme and swatches. */
+fun ThemeColorPalette.withGradientOffset(phase: Float): ThemeColorPalette {
+    if (accentGradient.size < 3) return this
+    val anchors = if (accentGradient.first() == accentGradient.last()) accentGradient.dropLast(1) else accentGradient
+    if (anchors.size < 2) return this
+    fun sample(position: Float): Color {
+        val wrapped = ((position % 1f) + 1f) % 1f
+        val scaled = wrapped * anchors.size
+        val index = scaled.toInt().coerceIn(0, anchors.lastIndex)
+        val fraction = scaled - index
+        return androidx.compose.ui.graphics.lerp(anchors[index], anchors[(index + 1) % anchors.size], fraction)
+    }
+    val shifted = (0..anchors.size).map { index -> sample(phase + index.toFloat() / anchors.size) }
+    return copy(accentGradient = shifted)
+}
+
+/** Blend animated theme accents onto the fixed dark preview surface. */
+fun ThemeColorPalette.withAnimatedOpacity(opacity: Float): ThemeColorPalette {
+    val base = Color(0xFF141923)
+    fun blend(color: Color) = androidx.compose.ui.graphics.lerp(base, color, opacity.coerceIn(0.15f, 1f))
+    return copy(
+        secondary = blend(secondary),
+        secondaryVariant = blend(secondaryVariant),
+        accentGradient = accentGradient.map(::blend),
+        onSecondary = if (opacity < 0.68f) Color.White else onSecondary,
+        onSecondaryVariant = if (opacity < 0.68f) Color.White else onSecondaryVariant,
+        focusRing = blend(focusRing),
+    )
 }

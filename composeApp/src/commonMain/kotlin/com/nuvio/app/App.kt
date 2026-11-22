@@ -111,8 +111,16 @@ internal fun AppEnvironment(
     }.collectAsStateWithLifecycle()
 
     val customThemeColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
+    val animatedGradientEnabled by ThemeSettingsRepository.animatedGradientEnabled.collectAsStateWithLifecycle()
+    val animatedThemeOpacity by ThemeSettingsRepository.animatedThemeOpacity.collectAsStateWithLifecycle()
 
-    NuvioTheme(appTheme = selectedTheme, amoled = amoledEnabled, customThemeColors = customThemeColors) {
+    NuvioTheme(
+        appTheme = selectedTheme,
+        amoled = amoledEnabled,
+        customThemeColors = customThemeColors,
+        animatedGradientEnabled = animatedGradientEnabled,
+        animatedThemeOpacity = animatedThemeOpacity,
+    ) {
         if (drawAppBackground) {
             AppBackgroundHost {
                 content()

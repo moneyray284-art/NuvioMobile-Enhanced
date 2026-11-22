@@ -1804,6 +1804,9 @@
     <string name="theme_cyber_mint">Cyber Mint</string>
     <string name="theme_amethyst">Cosmic Amethyst</string>
     <string name="theme_solar_flare">Solar Flare</string>
+    <string name="theme_aurora_veil">Aurora Veil</string>
+    <string name="theme_velvet_eclipse">Velvet Eclipse</string>
+    <string name="theme_midnight_tide">Midnight Tide</string>
     <string name="theme_custom">Custom</string>
     <string name="custom_theme_title">Your custom gradient</string>
     <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>

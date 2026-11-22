@@ -1,6 +1,10 @@
 package com.nuvio.app.features.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,25 +15,33 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.labelRes
+import com.nuvio.app.core.ui.isAnimatedGradient
 import com.nuvio.app.isIos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
@@ -73,6 +85,19 @@ internal fun LazyListScope.appearanceSettingsContent(
                     selectedTheme = selectedTheme,
                     onThemeSelected = onThemeSelected,
                 )
+                if (selectedTheme.isAnimatedGradient) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val animatedGradientEnabled by ThemeSettingsRepository.animatedGradientEnabled.collectAsStateWithLifecycle()
+                    SettingsSwitchRow(
+                        title = "Animated Gradient",
+                        description = "Move the selected theme gradient smoothly.",
+                        checked = animatedGradientEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = ThemeSettingsRepository::setAnimatedGradientEnabled,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    AnimatedThemeOpacityControl(isTablet = isTablet)
+                }
             }
         }
     }
@@ -163,6 +188,74 @@ internal fun LazyListScope.appearanceSettingsContent(
                     showAppIconPicker = false
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun AnimatedThemeOpacityControl(isTablet: Boolean) {
+    val storedOpacity by ThemeSettingsRepository.animatedThemeOpacity.collectAsStateWithLifecycle()
+    var draftOpacity by remember { mutableFloatStateOf(storedOpacity) }
+    var isDragging by remember { mutableStateOf(false) }
+    LaunchedEffect(storedOpacity) {
+        if (!isDragging) draftOpacity = storedOpacity
+    }
+    val horizontalPadding = if (isTablet) 20.dp else 16.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding, vertical = if (isTablet) 16.dp else 14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Animated Theme Opacity",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = "${(draftOpacity * 100f).roundToInt()}%",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Slider(
+            value = draftOpacity,
+            onValueChange = { value ->
+                isDragging = true
+                draftOpacity = value
+                ThemeSettingsRepository.previewAnimatedThemeOpacity(value)
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                ThemeSettingsRepository.saveAnimatedThemeOpacity(draftOpacity)
+            },
+            valueRange = 0.15f..1f,
+            steps = 0,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            listOf(25, 50, 75, 100).forEach { percent ->
+                TextButton(
+                    onClick = {
+                        val value = percent / 100f
+                        isDragging = false
+                        draftOpacity = value
+                        ThemeSettingsRepository.saveAnimatedThemeOpacity(value)
+                    },
+                ) {
+                    Text(text = "$percent%", color = Color.White)
+                }
+            }
         }
     }
 }

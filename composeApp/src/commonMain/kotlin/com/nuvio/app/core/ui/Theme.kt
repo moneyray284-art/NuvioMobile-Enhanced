@@ -1,11 +1,17 @@
 package com.nuvio.app.core.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.material3.darkColorScheme
@@ -24,9 +30,13 @@ import nuvio.composeapp.generated.resources.jetbrains_sans_bold
 import nuvio.composeapp.generated.resources.jetbrains_sans_regular
 import nuvio.composeapp.generated.resources.jetbrains_sans_semibold
 import org.jetbrains.compose.resources.Font
+import com.nuvio.app.isReducedMotionEnabled
+import com.nuvio.app.core.ui.background.AppBackgroundRepository
+import kotlinx.coroutines.isActive
 
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 val LocalThemePalette = staticCompositionLocalOf { ThemeColors.White }
+val LocalThemeGradientPhase = staticCompositionLocalOf { 0f }
 
 val MaterialTheme.themePalette: ThemeColorPalette
     @Composable
@@ -198,10 +208,41 @@ fun NuvioTheme(
     appTheme: AppTheme = AppTheme.WHITE,
     amoled: Boolean = false,
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
+    animatedGradientEnabled: Boolean = true,
+    animatedThemeOpacity: Float = 0.85f,
     content: @Composable () -> Unit,
 ) {
-    val palette = remember(appTheme, customThemeColors) {
+    val playerRouteSuspensions by AppBackgroundRepository.suspended.collectAsState()
+    val shouldAnimate = appTheme.isAnimatedGradient &&
+        animatedGradientEnabled &&
+        !isReducedMotionEnabled() &&
+        playerRouteSuspensions == 0
+    val gradientPhaseState = remember { Animatable(0f) }
+    LaunchedEffect(shouldAnimate) {
+        if (!shouldAnimate) {
+            gradientPhaseState.snapTo(0f)
+            return@LaunchedEffect
+        }
+        while (isActive) {
+            gradientPhaseState.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 2_600, easing = LinearEasing),
+            )
+            gradientPhaseState.snapTo(0f)
+        }
+    }
+    val gradientPhase by gradientPhaseState.asState()
+    val palette = remember(appTheme, customThemeColors, gradientPhase, animatedGradientEnabled, animatedThemeOpacity) {
         ThemeColors.getColorPalette(appTheme, customThemeColors)
+            .let { basePalette ->
+                if (appTheme.isAnimatedGradient) {
+                    basePalette
+                        .withGradientOffset(if (animatedGradientEnabled) gradientPhase else 0f)
+                        .withAnimatedOpacity(animatedThemeOpacity)
+                } else {
+                    basePalette
+                }
+            }
     }
     val colorScheme = buildColorScheme(palette, amoled = amoled)
     val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
@@ -217,6 +258,7 @@ fun NuvioTheme(
         LocalRippleConfiguration provides NuvioRippleConfiguration,
         LocalAppTheme provides appTheme,
         LocalThemePalette provides palette,
+        LocalThemeGradientPhase provides gradientPhase,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
