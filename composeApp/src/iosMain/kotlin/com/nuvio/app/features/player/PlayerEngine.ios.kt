@@ -31,6 +31,7 @@ import com.nuvio.app.core.ui.collectAfterPlayback
 import com.nuvio.app.core.ui.trimImageMemoryForPlayback
 import com.nuvio.app.features.autosync.AutoSyncMpvCoordinator
 import com.nuvio.app.features.autosync.AutoSyncMpvEngineController
+import com.nuvio.app.features.audiosync.createIosAudioSyncFallback
 import com.nuvio.app.features.autosync.IosAutoSyncMpvPlatform
 import com.nuvio.app.features.debrid.TorboxUsageRepository
 import com.nuvio.app.features.debrid.PremiumizeUsageRepository
@@ -372,6 +373,7 @@ actual fun PlatformPlayerSurface(
                             language = trackLanguage,
                             trackId = trackId,
                         ),
+                        formatBadge = subtitleFormatBadgeForCodec(bridge.getSubtitleTrackCodec(i)),
                     )
                 }
                 Logger.d(TAG) { "getSubtitleTracks: found ${tracks.size} tracks" }
@@ -499,6 +501,10 @@ actual fun PlatformPlayerSurface(
                 bridge.setSubtitleDelayMs(targetMs)
             }
 
+            override val supportsAssStyleCustomization = true
+
+            override val rendersAssNatively = true
+
             override fun applySubtitleStyle(style: SubtitleStyleState) {
                 InAppLogger.debug(
                     "Player/iOS",
@@ -516,6 +522,8 @@ actual fun PlatformPlayerSurface(
                     stripSdh = style.stripSdh,
                     styledOverlay = style.requiresComposeStyledOverlay,
                     outlineBlur = style.mpvNativeOutlineBlurLevel,
+                    customizeAss = style.appearance.customizeAss,
+                    assScale = style.assScale,
                 )
             }
 
@@ -541,18 +549,28 @@ actual fun PlatformPlayerSurface(
     val latestExternalSubtitles = rememberUpdatedState(externalSubtitles)
     val sanitizedSourceHeaders = remember(sourceHeaders) { sanitizePlaybackHeaders(sourceHeaders) }
     val autoSyncCoordinator = remember(sourceUrl, sanitizedSourceHeaders, coroutineScope) {
+        val subtitleHeaders: (String) -> Map<String, String> = { subtitleUrl ->
+            latestExternalSubtitles.value
+                .firstOrNull { it.url == subtitleUrl }
+                ?.headers
+                .orEmpty()
+        }
         AutoSyncMpvCoordinator(
             scope = coroutineScope,
             sourceUrl = sourceUrl,
             sourceHeaders = sanitizedSourceHeaders,
-            getSubtitleHeaders = { subtitleUrl ->
-                latestExternalSubtitles.value
-                    .firstOrNull { it.url == subtitleUrl }
-                    ?.headers
-                    .orEmpty()
-            },
+            getSubtitleHeaders = subtitleHeaders,
             getPreferredLanguage = { latestPlayerSettings.value.preferredSubtitleLanguage },
             platform = IosAutoSyncMpvPlatform,
+            audioFallbackFactory = {
+                createIosAudioSyncFallback(
+                    scope = coroutineScope,
+                    bridge = bridge,
+                    sourceUrl = sourceUrl,
+                    sourceHeaders = sanitizedSourceHeaders,
+                    getSubtitleHeaders = subtitleHeaders,
+                )
+            },
         )
     }
     DisposableEffect(autoSyncCoordinator) {
