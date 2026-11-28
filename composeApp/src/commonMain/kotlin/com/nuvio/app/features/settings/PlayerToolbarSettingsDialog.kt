@@ -60,7 +60,6 @@ internal val PlayerToolbarButton.labelRes: StringResource
         PlayerToolbarButton.PLAYBACK_INFO -> Res.string.compose_player_playback_info
         PlayerToolbarButton.SWITCH_ENGINE -> Res.string.cd_switch_player_engine
         PlayerToolbarButton.VIDEO_SETTINGS -> Res.string.player_action_video_settings
-        PlayerToolbarButton.AMBIENT -> Res.string.player_ambient_button
         PlayerToolbarButton.SUBMIT_INTRO -> Res.string.submit_intro_action
     }
 

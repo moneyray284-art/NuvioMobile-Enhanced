@@ -47,7 +47,6 @@ data class PlayerSettingsUiState(
     val skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val toolbarLayout: PlayerToolbarLayout = PlayerToolbarLayout.Default,
-    val ambientMode: AmbientMode = AmbientMode.BALANCED,
     val legacyBottomButtons: LegacyBottomButtonLayout = LegacyPlayerButtonLayouts.DefaultBottom,
     val legacyTopButtons: LegacyTopButtonLayout = LegacyPlayerButtonLayouts.DefaultTop,
     val touchGesturesEnabled: Boolean = true,
@@ -187,7 +186,6 @@ object PlayerSettingsRepository {
     private var skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var toolbarLayout = PlayerToolbarLayout.Default
-    private var ambientMode = AmbientMode.BALANCED
     private var legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
     private var legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
     private var touchGesturesEnabled = true
@@ -312,7 +310,6 @@ object PlayerSettingsRepository {
         skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         toolbarLayout = PlayerToolbarLayout.Default
-        ambientMode = AmbientMode.BALANCED
         legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
         legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
         touchGesturesEnabled = true
@@ -432,7 +429,6 @@ object PlayerSettingsRepository {
         skipBackwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipBackwardSeconds())
         skipForwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipForwardSeconds())
         toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
-        ambientMode = AmbientMode.fromStorageValue(PlayerSettingsStorage.loadAmbientMode())
         legacyBottomButtons = LegacyPlayerButtonLayouts.decodeBottom(PlayerSettingsStorage.loadLegacyBottomButtons())
         legacyTopButtons = LegacyPlayerButtonLayouts.decodeTop(PlayerSettingsStorage.loadLegacyTopButtons())
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
@@ -716,14 +712,6 @@ object PlayerSettingsRepository {
         toolbarLayout = layout
         publish()
         PlayerSettingsStorage.saveToolbarLayout(layout.encode())
-    }
-
-    fun setAmbientMode(mode: AmbientMode) {
-        ensureLoaded()
-        if (ambientMode == mode) return
-        ambientMode = mode
-        publish()
-        PlayerSettingsStorage.saveAmbientMode(mode.name)
     }
 
     fun setLegacyBottomButtons(layout: LegacyBottomButtonLayout) {
@@ -1612,7 +1600,6 @@ object PlayerSettingsRepository {
             skipBackwardSeconds = skipBackwardSeconds,
             skipForwardSeconds = skipForwardSeconds,
             toolbarLayout = toolbarLayout,
-            ambientMode = ambientMode,
             legacyBottomButtons = legacyBottomButtons,
             legacyTopButtons = legacyTopButtons,
             touchGesturesEnabled = touchGesturesEnabled,

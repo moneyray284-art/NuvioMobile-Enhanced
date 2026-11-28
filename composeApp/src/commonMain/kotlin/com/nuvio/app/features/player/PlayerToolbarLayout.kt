@@ -16,7 +16,6 @@ enum class PlayerToolbarButton(val storageId: String) {
     PLAYBACK_INFO("playback_info"),
     SWITCH_ENGINE("switch_engine"),
     VIDEO_SETTINGS("video_settings"),
-    AMBIENT("ambient"),
     SUBMIT_INTRO("submit_intro"),
     ;
 
@@ -126,7 +125,6 @@ data class PlayerToolbarLayout(
                     PlayerToolbarButton.PLAYBACK_INFO,
                     PlayerToolbarButton.SWITCH_ENGINE,
                     PlayerToolbarButton.VIDEO_SETTINGS,
-                    PlayerToolbarButton.AMBIENT,
                     PlayerToolbarButton.SUBMIT_INTRO,
                 ).map { PlayerToolbarEntry(it, PlayerToolbarPlacement.OVERFLOW) },
         )

@@ -2367,13 +2367,6 @@
     <string name="unit_bytes_gb">GB</string>
     <string name="player_action_submit_intro">Kirim Intro</string>
     <string name="player_action_video_settings">Pengaturan video</string>
-    <string name="player_ambient_button">Ambient</string>
-    <string name="player_ambient_mode_title">Mode Ambient</string>
-    <string name="player_ambient_mode_off">Mati</string>
-    <string name="player_ambient_mode_subtle">Halus</string>
-    <string name="player_ambient_mode_balanced">Seimbang</string>
-    <string name="player_ambient_mode_vivid">Cerah</string>
-    <string name="player_ambient_mode_max">Maksimal</string>
     <string name="player_action_rotate_portrait">Tonton dalam mode potret</string>
     <string name="player_action_rotate_landscape">Tonton dalam mode lanskap</string>
     <string name="cloud_library_provider_unavailable">Pustaka cloud tidak tersedia untuk %1$s.</string>
