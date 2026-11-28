@@ -482,6 +482,39 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
             }
         }
 
+        if (playerSurfaceSourceUrl != null && !isMiniPresentation) {
+            val screenAspectRatio = if (layoutSize.height > 0) {
+                layoutSize.width.toFloat() / layoutSize.height.toFloat()
+            } else {
+                0f
+            }
+            val videoAspectRatio = if (playbackSnapshot.videoWidth > 0 && playbackSnapshot.videoHeight > 0) {
+                playbackSnapshot.videoWidth.toFloat() / playbackSnapshot.videoHeight.toFloat()
+            } else {
+                0f
+            }
+            if (shouldRenderAmbient(
+                    mode = playerSettingsUiState.ambientMode,
+                    resizeMode = resizeMode,
+                    videoAspectRatio = videoAspectRatio,
+                    screenAspectRatio = screenAspectRatio,
+                )
+            ) {
+                AmbientLetterboxOverlay(
+                    mode = playerSettingsUiState.ambientMode,
+                    resizeMode = resizeMode,
+                    videoAspectRatio = videoAspectRatio,
+                    screenAspectRatio = screenAspectRatio,
+                    artworkUrl = if (isLiveTvPlayback) {
+                        activeLogo?.takeIf(String::isNotBlank) ?: background ?: poster
+                    } else {
+                        background ?: poster
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
         if (!isMiniPresentation) {
         AnimatedVisibility(
             visible = playerSettingsUiState.pauseOverlayEnabled && pausedOverlayVisible && !controlsVisible && !playerControlsLocked && fold == null,
@@ -773,13 +806,9 @@ private fun PlayerScreenRuntime.RenderPlayerControls(
                 { showUserRatingSheet = true }
             } else null,
             userRating = userRating,
-            onVideoSettingsClick = if (isIos || isAnimePlayback) {
-                {
-                    showVideoSettingsModal = true
-                    controlsVisible = true
-                }
-            } else {
-                null
+            onVideoSettingsClick = {
+                showVideoSettingsModal = true
+                controlsVisible = true
             },
             onSourcesClick = if (!isLiveTvPlayback && activeVideoId != null) {
                 {
@@ -1231,6 +1260,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
         },
         onVideoSettingsModalDismissed = { showVideoSettingsModal = false },
         animeEnhancementStatus = playbackSnapshot.animeEnhancement,
+        isAnimePlayback = isAnimePlayback,
         showSourcesPanel = showSourcesPanel,
         sourceStreamsState = sourceStreamsState,
         contentTitle = title,

@@ -41,6 +41,8 @@ internal expect object PlayerSettingsStorage {
     fun saveSkipForwardSeconds(seconds: Int)
     fun loadToolbarLayout(): String?
     fun saveToolbarLayout(layout: String)
+    fun loadAmbientMode(): String?
+    fun saveAmbientMode(mode: String)
     fun loadLegacyBottomButtons(): String?
     fun saveLegacyBottomButtons(layout: String)
     fun loadLegacyTopButtons(): String?

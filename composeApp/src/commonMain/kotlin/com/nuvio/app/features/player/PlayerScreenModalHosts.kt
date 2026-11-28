@@ -63,6 +63,7 @@ internal fun PlayerScreenModalHosts(
     onVideoSettingsChanged: () -> Unit,
     onVideoSettingsModalDismissed: () -> Unit,
     animeEnhancementStatus: AnimeEnhancementStatus? = null,
+    isAnimePlayback: Boolean,
     showSourcesPanel: Boolean,
     sourceStreamsState: StreamsUiState,
     contentTitle: String,
@@ -196,10 +197,11 @@ internal fun PlayerScreenModalHosts(
         onDismiss = onVideoSettingsModalDismissed,
     )
 
-    AnimeEnhancementPanel(
+    AndroidVideoSettingsPanel(
         visible = showVideoSettingsModal && !isIos,
         settings = playerSettings,
         status = animeEnhancementStatus,
+        showAnimeEnhancements = isAnimePlayback,
         onDismiss = onVideoSettingsModalDismissed,
     )
 

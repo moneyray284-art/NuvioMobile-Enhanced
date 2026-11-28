@@ -2503,6 +2503,13 @@
     <!-- PlayerControls a11y -->
     <string name="player_action_submit_intro">Submit Intro</string>
     <string name="player_action_video_settings">Video settings</string>
+    <string name="player_ambient_button">Ambient</string>
+    <string name="player_ambient_mode_title">Ambient Mode</string>
+    <string name="player_ambient_mode_off">Off</string>
+    <string name="player_ambient_mode_subtle">Subtle</string>
+    <string name="player_ambient_mode_balanced">Balanced</string>
+    <string name="player_ambient_mode_vivid">Vivid</string>
+    <string name="player_ambient_mode_max">Max</string>
     <string name="player_action_rotate_portrait">Watch in portrait</string>
     <string name="player_action_rotate_landscape">Watch in landscape</string>
     <!-- CloudLibrary -->

@@ -31,6 +31,7 @@ import nuvio.composeapp.generated.resources.player_anime4k_status_active
 import nuvio.composeapp.generated.resources.player_anime4k_status_inactive
 import nuvio.composeapp.generated.resources.player_anime4k_status_off
 import nuvio.composeapp.generated.resources.player_anime4k_title
+import nuvio.composeapp.generated.resources.player_video_settings_title
 import nuvio.composeapp.generated.resources.settings_playback_anime_line_sharpen
 import nuvio.composeapp.generated.resources.settings_playback_anime_line_sharpen_description
 import nuvio.composeapp.generated.resources.settings_playback_anime_upscale
@@ -75,10 +76,11 @@ internal fun AnimeEnhancementBadge(
 }
 
 @Composable
-internal fun AnimeEnhancementPanel(
+internal fun AndroidVideoSettingsPanel(
     visible: Boolean,
     settings: PlayerSettingsUiState,
     status: AnimeEnhancementStatus?,
+    showAnimeEnhancements: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -93,7 +95,7 @@ internal fun AnimeEnhancementPanel(
                 .padding(24.dp),
         ) {
             PlayerPanelHeader(
-                title = stringResource(Res.string.player_anime4k_title),
+                    title = stringResource(Res.string.player_video_settings_title),
             ) {
                 PlayerDialogButton(
                     label = stringResource(Res.string.action_close),
@@ -103,17 +105,6 @@ internal fun AnimeEnhancementPanel(
 
             Spacer(Modifier.height(8.dp))
 
-            val enabled = settings.androidAnimeUpscaleEnabled || settings.androidAnimeLineSharpenEnabled
-            Text(
-                text = when {
-                    status != null -> stringResource(Res.string.player_anime4k_status_active, animeEnhancementSummary(status))
-                    enabled -> stringResource(Res.string.player_anime4k_status_inactive)
-                    else -> stringResource(Res.string.player_anime4k_status_off)
-                },
-                color = if (status != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
-            )
-
             Spacer(Modifier.height(16.dp))
 
             Column(
@@ -122,18 +113,34 @@ internal fun AnimeEnhancementPanel(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                AnimeEnhancementToggleRow(
-                    title = stringResource(Res.string.settings_playback_anime_upscale),
-                    description = stringResource(Res.string.settings_playback_anime_upscale_description),
-                    checked = settings.androidAnimeUpscaleEnabled,
-                    onCheckedChange = PlayerSettingsRepository::setAndroidAnimeUpscaleEnabled,
+                AmbientModeSelector(
+                    selectedMode = settings.ambientMode,
+                    onSelect = PlayerSettingsRepository::setAmbientMode,
                 )
-                AnimeEnhancementToggleRow(
-                    title = stringResource(Res.string.settings_playback_anime_line_sharpen),
-                    description = stringResource(Res.string.settings_playback_anime_line_sharpen_description),
-                    checked = settings.androidAnimeLineSharpenEnabled,
-                    onCheckedChange = PlayerSettingsRepository::setAndroidAnimeLineSharpenEnabled,
-                )
+                if (showAnimeEnhancements) {
+                    val enabled = settings.androidAnimeUpscaleEnabled || settings.androidAnimeLineSharpenEnabled
+                    Text(
+                        text = when {
+                            status != null -> stringResource(Res.string.player_anime4k_status_active, animeEnhancementSummary(status))
+                            enabled -> stringResource(Res.string.player_anime4k_status_inactive)
+                            else -> stringResource(Res.string.player_anime4k_status_off)
+                        },
+                        color = if (status != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                    )
+                    AnimeEnhancementToggleRow(
+                        title = stringResource(Res.string.settings_playback_anime_upscale),
+                        description = stringResource(Res.string.settings_playback_anime_upscale_description),
+                        checked = settings.androidAnimeUpscaleEnabled,
+                        onCheckedChange = PlayerSettingsRepository::setAndroidAnimeUpscaleEnabled,
+                    )
+                    AnimeEnhancementToggleRow(
+                        title = stringResource(Res.string.settings_playback_anime_line_sharpen),
+                        description = stringResource(Res.string.settings_playback_anime_line_sharpen_description),
+                        checked = settings.androidAnimeLineSharpenEnabled,
+                        onCheckedChange = PlayerSettingsRepository::setAndroidAnimeLineSharpenEnabled,
+                    )
+                }
             }
         }
     }

@@ -87,6 +87,14 @@ internal fun IosVideoSettingsModal(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                AmbientModeSelector(
+                    selectedMode = settings.ambientMode,
+                    onSelect = {
+                        PlayerSettingsRepository.setAmbientMode(it)
+                        onSettingsChanged()
+                    },
+                )
+
                 OptionGroup(
                     title = stringResource(Res.string.player_video_settings_output_preset),
                     options = IosVideoOutputPreset.entries,

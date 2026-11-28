@@ -48,4 +48,25 @@ class PlayerToolbarLayoutTest {
         assertEquals(PlayerControlBarAlignment.RIGHT, legacyHiddenDecoded.alignment)
         assertTrue(PlayerToolbarButton.RESIZE in legacyHiddenDecoded.hiddenButtons)
     }
+
+    @Test
+    fun existingCustomLayoutAddsAmbientInArrowWithoutChangingSavedEntries() {
+        val saved = PlayerToolbarLayout.decode(
+            "speed:v,subtitles:h,resize:o;v2;align=right",
+        )
+
+        assertEquals(PlayerControlBarAlignment.RIGHT, saved.alignment)
+        assertEquals(
+            listOf(
+                PlayerToolbarButton.SPEED,
+                PlayerToolbarButton.SUBTITLES,
+                PlayerToolbarButton.RESIZE,
+            ),
+            saved.entries.take(3).map { it.button },
+        )
+        assertEquals(PlayerToolbarPlacement.BAR, saved.entries.first { it.button == PlayerToolbarButton.SPEED }.placement)
+        assertEquals(PlayerToolbarPlacement.HIDDEN, saved.entries.first { it.button == PlayerToolbarButton.SUBTITLES }.placement)
+        assertEquals(PlayerToolbarPlacement.OVERFLOW, saved.entries.first { it.button == PlayerToolbarButton.RESIZE }.placement)
+        assertEquals(PlayerToolbarPlacement.OVERFLOW, saved.entries.first { it.button == PlayerToolbarButton.AMBIENT }.placement)
+    }
 }

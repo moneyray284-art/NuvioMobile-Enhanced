@@ -34,6 +34,7 @@ actual object PlayerSettingsStorage {
     private const val skipBackwardSecondsKey = "skip_backward_seconds"
     private const val skipIntroOffsetSecondsKey = "skip_intro_offset_seconds"
     private const val toolbarLayoutKey = "player_toolbar_layout"
+    private const val ambientModeKey = "player_ambient_mode"
     private const val legacyBottomButtonsKey = "legacy_player_bottom_buttons"
     private const val legacyTopButtonsKey = "legacy_player_top_buttons"
     private const val skipForwardSecondsKey = "skip_forward_seconds"
@@ -164,6 +165,7 @@ actual object PlayerSettingsStorage {
         pauseOverlayEnabledKey,
         showParentalGuideKey,
         resizeModeKey,
+        ambientModeKey,
         holdToSpeedEnabledKey,
         holdToSpeedValueKey,
         touchGesturesEnabledKey,
@@ -411,6 +413,13 @@ actual object PlayerSettingsStorage {
 
     actual fun saveToolbarLayout(layout: String) {
         preferences?.edit()?.putString(ProfileScopedKey.of(toolbarLayoutKey), layout)?.apply()
+    }
+
+    actual fun loadAmbientMode(): String? =
+        preferences?.getString(ProfileScopedKey.of(ambientModeKey), null)
+
+    actual fun saveAmbientMode(mode: String) {
+        preferences?.edit()?.putString(ProfileScopedKey.of(ambientModeKey), mode)?.apply()
     }
 
     actual fun loadLegacyBottomButtons(): String? =
@@ -2050,6 +2059,7 @@ actual object PlayerSettingsStorage {
         loadPauseOverlayEnabled()?.let { put(pauseOverlayEnabledKey, encodeSyncBoolean(it)) }
         loadShowParentalGuide()?.let { put(showParentalGuideKey, encodeSyncBoolean(it)) }
         loadResizeMode()?.let { put(resizeModeKey, encodeSyncString(it)) }
+        loadAmbientMode()?.let { put(ambientModeKey, encodeSyncString(it)) }
         loadHoldToSpeedEnabled()?.let { put(holdToSpeedEnabledKey, encodeSyncBoolean(it)) }
         loadHoldToSpeedValue()?.let { put(holdToSpeedValueKey, encodeSyncFloat(it)) }
         loadTouchGesturesEnabled()?.let { put(touchGesturesEnabledKey, encodeSyncBoolean(it)) }
@@ -2149,6 +2159,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(pauseOverlayEnabledKey)?.let(::savePauseOverlayEnabled)
         payload.decodeSyncBoolean(showParentalGuideKey)?.let(::saveShowParentalGuide)
         payload.decodeSyncString(resizeModeKey)?.let(::saveResizeMode)
+        payload.decodeSyncString(ambientModeKey)?.let(::saveAmbientMode)
         payload.decodeSyncBoolean(holdToSpeedEnabledKey)?.let(::saveHoldToSpeedEnabled)
         payload.decodeSyncFloat(holdToSpeedValueKey)?.let(::saveHoldToSpeedValue)
         payload.decodeSyncBoolean(touchGesturesEnabledKey)?.let(::saveTouchGesturesEnabled)

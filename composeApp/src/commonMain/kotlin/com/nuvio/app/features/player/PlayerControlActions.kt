@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
@@ -205,6 +206,8 @@ internal fun PlayerControlActions(
     userRating: Int? = null,
     onInteraction: () -> Unit,
 ) {
+    val playerSettings by PlayerSettingsRepository.uiState.collectAsState()
+    var ambientPopupExpanded by remember { mutableStateOf(false) }
     val availableActions = buildMap<PlayerToolbarButton, PlayerControlAction> {
         onNextEpisodeClick?.let {
             this[PlayerToolbarButton.NEXT_EPISODE] = PlayerControlAction(
@@ -304,6 +307,28 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.Tune,
             )
         }
+        this[PlayerToolbarButton.AMBIENT] = PlayerControlAction(
+            description = stringResource(Res.string.player_ambient_button),
+            onClick = { ambientPopupExpanded = !ambientPopupExpanded },
+            icon = Icons.Rounded.LightMode,
+            tint = if (playerSettings.ambientMode == AmbientMode.OFF) {
+                Color.White
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            popup = {
+                AmbientModePopup(
+                    expanded = ambientPopupExpanded,
+                    selectedMode = playerSettings.ambientMode,
+                    onSelect = { mode ->
+                        PlayerSettingsRepository.setAmbientMode(mode)
+                        ambientPopupExpanded = false
+                        onInteraction()
+                    },
+                    onDismiss = { ambientPopupExpanded = false },
+                )
+            },
+        )
         onSubmitIntroClick?.let {
             this[PlayerToolbarButton.SUBMIT_INTRO] = PlayerControlAction(
                 stringResource(Res.string.submit_intro_action), it,
@@ -311,7 +336,6 @@ internal fun PlayerControlActions(
             )
         }
     }
-    val playerSettings by PlayerSettingsRepository.uiState.collectAsState()
     val toolbarLayout = playerSettings.toolbarLayout
     val primaryActions = toolbarLayout.visibleButtons.mapNotNull(availableActions::get)
     val overflowActions = toolbarLayout.overflowButtons.mapNotNull(availableActions::get)
